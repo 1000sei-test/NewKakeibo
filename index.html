@@ -18,7 +18,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{height:100%;height:-webkit-fill-available;background:var(--bg)}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;overflow:hidden}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;height:-webkit-fill-available;height:calc(var(--vh,1vh) * 100);overflow:hidden}
 .hdr{background:var(--bg);padding:calc(12px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border)}
 .hdr-nav{background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:4px 10px}
 .hdr-center{text-align:center}
@@ -1702,6 +1702,17 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize',()=>{
     if(!document.getElementById('input-sheet').classList.contains('show')&&window.scrollY!==0)window.scrollTo(0,0);
   });
+}
+/* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策
+   実際のwindow.innerHeightを--vhに反映し、100vhの代わりに使う */
+function setRealVH(){
+  document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px');
+}
+setRealVH();
+window.addEventListener('resize',setRealVH);
+window.addEventListener('orientationchange',()=>setTimeout(setRealVH,100));
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',setRealVH);
 }
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
