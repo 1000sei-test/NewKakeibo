@@ -1,7 +1,7 @@
 {
   "name": "家計簿",
   "short_name": "家計簿",
-  "start_url": "./index.html",
+  "start_url": "./kakeibo.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
