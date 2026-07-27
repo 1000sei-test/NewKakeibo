@@ -31,7 +31,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .nav-btn{flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;min-height:56px}
 .nav-btn.active{color:var(--accent)}
 .nav-ic{font-size:22px;line-height:1}
-.ip{padding:16px 16px 160px}.ap{padding:14px 14px 160px}.sp{padding:14px 14px 160px}
+.ip{padding:calc(16px + env(safe-area-inset-top,0px)) 16px 160px}.ap{padding:calc(14px + env(safe-area-inset-top,0px)) 14px 160px}.sp{padding:calc(14px + env(safe-area-inset-top,0px)) 14px 160px}
 .cal-hdr{padding:10px 16px;text-align:center;font-size:16px;font-weight:600}
 .wk-row{display:grid;grid-template-columns:repeat(7,1fr);padding:0 10px}
 .wk-lbl{text-align:center;font-size:11px;color:#b0a090;padding:6px 0;font-weight:500}
