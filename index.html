@@ -426,6 +426,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:var(--muted)">変動費</div><div style="font-size:14px;font-weight:700;color:var(--red)" id="ana-var-pure">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-special-col"><div style="font-size:10px;color:var(--orange)">⚡ 特別支出</div><div style="font-size:14px;font-weight:700;color:var(--orange)" id="ana-special">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:var(--purple)">🔒 固定費</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-mf">¥0</div></div>
+          <div style="display:flex;flex-direction:column;gap:2px" id="ana-out-inv-col"><div style="font-size:10px;color:#3a6ea5">📈 投資</div><div style="font-size:14px;font-weight:700;color:#2a5a8a" id="ana-out-inv">¥0</div></div>
         </div>
       </div>
       <div class="sc" style="grid-column:1/-1;background:#fff5f4;border:1px solid #f0c8c0">
@@ -1241,6 +1242,8 @@ function renderM(){
   const fixedTotal=getFixedTotal(anaY,anaM);
   const allFixedTotal=mfTotal+fixedTotal;
   const totalOut=varOut+allFixedTotal;
+  const invMonthTotalForOut=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
+  const totalOutWithInv=totalOut+invMonthTotalForOut;
   // 固定費内訳
   const fixedYTotal=fixed.filter(f=>f.type==='y'&&isFixedActive(f,anaY,anaM)&&f.month===(anaM+1)).reduce((s,f)=>s+f.amount,0);
   const fixedMTotal=fixed.filter(f=>f.type==='m'&&isFixedActive(f,anaY,anaM)).reduce((s,f)=>s+f.amount,0);
@@ -1249,7 +1252,10 @@ function renderM(){
   const pureVar=varOut-spTotal;
   const set2=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   // 支出合計枠（上段）
-  set2('ana-out','¥'+totalOut.toLocaleString());
+  set2('ana-out','¥'+totalOutWithInv.toLocaleString());
+  set2('ana-out-inv','¥'+invMonthTotalForOut.toLocaleString());
+  const outInvCol=document.getElementById('ana-out-inv-col');
+  if(outInvCol)outInvCol.style.display=invMonthTotalForOut>0?'flex':'none';
   set2('ana-var-pure','¥'+pureVar.toLocaleString());
   set2('ana-special','¥'+spTotal.toLocaleString());
   set2('ana-mf','¥'+allFixedTotal.toLocaleString());
