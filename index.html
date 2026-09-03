@@ -1297,11 +1297,11 @@ function renderM(){
   if(capListEl){const caps=Object.entries(capData).filter(([,v])=>v>0);capListEl.innerHTML=caps.length>0?caps.map(([g,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#fff8f0;border-radius:8px;margin-bottom:4px;font-size:13px"><span style="flex:1;color:#ff9500;font-weight:600">${g}</span><span style="font-weight:700">¥${v.toLocaleString()}</span><button onclick="editCapLimit('${g}',${v})" style="border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px;font-family:inherit">編集</button><button onclick="delCapLimit('${g}')" style="border:1.5px solid var(--red);background:none;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;padding:3px 6px;border-radius:6px">✕</button></div>`).join(''):'<div style="font-size:11px;color:var(--muted)">設定なし</div>';}
   const capBtn=document.getElementById('cap-save-btn');if(capBtn){capBtn.disabled=true;capBtn.style.background='#c7c7cc';capBtn.style.cursor='default';}
   const capInp=document.getElementById('cap-inp');if(capInp)capInp.value='';
-  // 変動費のみで予算計算（月額固定費は除外）
-  const varSpend=rr.filter(r=>r.type==='out'&&!r.special&&!capData[r.genre]).reduce((s,r)=>s+r.amount,0);
+  // 変動費のみで予算計算（月額固定費は除外、手当てでカバーされる分も予算からは除外）
+  const varSpend=rr.filter(r=>r.type==='out'&&!r.special&&!capData[r.genre]).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);
   let capExcludeTotal=0;
-  Object.keys(capData).forEach(g=>{const cap=capData[g];if(!cap)return;const gTotal=rr.filter(r=>r.type==='out'&&r.genre===g&&!r.special).reduce((s,r)=>s+r.amount,0);capExcludeTotal+=Math.min(gTotal,cap);});
-  const capGenreSpend=rr.filter(r=>r.type==='out'&&capData[r.genre]&&!r.special).reduce((s,r)=>s+r.amount,0);
+  Object.keys(capData).forEach(g=>{const cap=capData[g];if(!cap)return;const gTotal=rr.filter(r=>r.type==='out'&&r.genre===g&&!r.special).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);capExcludeTotal+=Math.min(gTotal,cap);});
+  const capGenreSpend=rr.filter(r=>r.type==='out'&&capData[r.genre]&&!r.special).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);
   const capOverSpend=Math.max(capGenreSpend-capExcludeTotal,0);
   const totalVarSpend=varSpend+capOverSpend;
   const specialTotal=rr.filter(r=>r.type==='out'&&r.special).reduce((s,r)=>s+r.amount,0);
