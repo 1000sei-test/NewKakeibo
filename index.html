@@ -903,6 +903,15 @@ function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.get
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}
   if(k==='kk_records'||k==='kk_incomes'||k==='kk_salaries'){try{updateBackupBar();}catch(e){}}}
 function uid(){return Date.now()+'_'+Math.random().toString(36).slice(2,7)}
+function toggleMemoRow(mid){const el=document.getElementById(mid);if(el)el.style.display=el.style.display==='block'?'none':'block';}
+function memoDetailRow(r){
+  const specialTag=r.special?'<span class="special-badge">特別</span>':'';
+  if(!r.memo){
+    return `<div class="genre-detail-row"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}${specialTag}</div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div>`;
+  }
+  const mid='mm_'+Math.random().toString(36).slice(2,9);
+  return `<div><div class="genre-detail-row" style="cursor:pointer" onclick="toggleMemoRow('${mid}')"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}${specialTag} <span style="color:#5b7e6e;font-size:11px">📝メモ</span></div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div><div id="${mid}" style="display:none;font-size:11px;color:var(--muted);background:#f7f4ef;border-radius:6px;padding:6px 8px;margin:0 0 6px">${r.memo}</div></div>`;
+}
 function nl2br(str){return (str||'').replace(/\n/g,'<br>');}
 
 // 固定費の有効期間チェック
@@ -1345,7 +1354,7 @@ function renderM(){
         if(ownRecs.length>0){
           const ownTotal=ownRecs.reduce((s,r)=>s+r.amount,0);
           const ownDetailId=`${detailId}_own`;
-          const ownRowsHtml=ownRecs.sort((a,b)=>a.date>b.date?1:-1).map(r=>`<div class="genre-detail-row"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}</div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div>`).join('');
+          const ownRowsHtml=ownRecs.sort((a,b)=>a.date>b.date?1:-1).map(memoDetailRow).join('');
           subRows+=`<div style="margin-bottom:6px"><div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid #e8e2da;cursor:pointer" onclick="toggleSubDetail('${ownDetailId}',this)"><div style="flex:1;color:#666">${g}</div><div style="font-weight:700;color:${col}">¥${ownTotal.toLocaleString()}</div><span style="font-size:10px;color:#aaa">▶</span></div><div id="${ownDetailId}" style="display:none;padding:4px 8px;background:#faf8f5;border-radius:8px;margin:2px 0 4px">${ownRowsHtml}</div></div>`;
         }
         // 子ジャンル・一括カテゴリ
@@ -1356,7 +1365,7 @@ function renderM(){
             if(!sgRecs.length)return;
             const sgTotal=sgRecs.reduce((s,r)=>s+r.amount,0);
             const sgDetailId=`${detailId}_${sg.replace(/\s/g,'_')}`;
-            const sgRowsHtml=sgRecs.sort((a,b)=>a.date>b.date?1:-1).map(r=>`<div class="genre-detail-row"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}</div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div>`).join('');
+            const sgRowsHtml=sgRecs.sort((a,b)=>a.date>b.date?1:-1).map(memoDetailRow).join('');
             subRows+=`<div style="margin-bottom:6px"><div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid #e8e2da;cursor:pointer" onclick="toggleSubDetail('${sgDetailId}',this)"><div style="flex:1;color:#666">${sg}</div><div style="font-weight:700;color:${gc(sg)}">¥${sgTotal.toLocaleString()}</div><span style="font-size:10px;color:#aaa">▶</span></div><div id="${sgDetailId}" style="display:none;padding:4px 8px;background:#faf8f5;border-radius:8px;margin:2px 0 4px">${sgRowsHtml}</div></div>`;
           } else if(key2.startsWith('b:')){
             const bc=bulkCats.find(c=>c.id===key2.slice(2));
@@ -1365,14 +1374,14 @@ function renderM(){
             if(!bcRecs.length)return;
             const bcTotal=bcRecs.reduce((s,r)=>s+r.amount,0);
             const bcDetailId=`${detailId}_${bc.id}`;
-            const bcRowsHtml=bcRecs.sort((a,b)=>a.date>b.date?1:-1).map(r=>`<div class="genre-detail-row"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}</div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div>`).join('');
+            const bcRowsHtml=bcRecs.sort((a,b)=>a.date>b.date?1:-1).map(memoDetailRow).join('');
             subRows+=`<div style="margin-bottom:6px"><div style="display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid #e8e2da;cursor:pointer" onclick="toggleSubDetail('${bcDetailId}',this)"><div style="flex:1;color:#666">${bc.emoji} ${bc.name}</div><div style="font-weight:700;color:#5b7e6e">¥${bcTotal.toLocaleString()}</div><span style="font-size:10px;color:#aaa">▶</span></div><div id="${bcDetailId}" style="display:none;padding:4px 8px;background:#faf8f5;border-radius:8px;margin:2px 0 4px">${bcRowsHtml}</div></div>`;
           }
         });
         rows=subRows;
       } else {
         // 内訳なし: シンプルな明細一覧
-        rows=rr.filter(r=>r.type==='out'&&r.genre===g&&!(r.bulkCatId&&hiddenBulkIds.has(r.bulkCatId))).sort((a,b)=>a.date>b.date?1:-1).map(r=>`<div class="genre-detail-row"><div class="dr-date">${r.date.slice(5)}</div><div class="dr-title">${r.title}${r.special?'<span class="special-badge">特別</span>':''}</div><div class="dr-amt">¥${r.amount.toLocaleString()}</div></div>`).join('');
+        rows=rr.filter(r=>r.type==='out'&&r.genre===g&&!(r.bulkCatId&&hiddenBulkIds.has(r.bulkCatId))).sort((a,b)=>a.date>b.date?1:-1).map(memoDetailRow).join('');
       }
     }
     h+=`<div><div class="grow" data-detail-id="${detailId}" onclick="handleGenreClick(this)"><div class="gdot" style="background:${col}"></div><div class="gname">${g} ${spBadge}</div><div class="gtrack"><div class="gfill" style="width:${total/maxG*100}%;background:${col}"></div></div><div class="gamt" style="color:${col}">¥${total.toLocaleString()}</div><span class="gchevron">▶</span></div><div class="genre-detail" id="${detailId}">${rows}</div></div>`;
