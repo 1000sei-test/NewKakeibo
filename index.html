@@ -978,6 +978,7 @@ function init(){
   salY=today.getFullYear();salM=today.getMonth();salAnnY=today.getFullYear();
   incY=today.getFullYear();incM=today.getMonth();incAnnY=today.getFullYear();
   invY=today.getFullYear();invM=today.getMonth();
+  applyAutoContributions();
   bmY=today.getFullYear();bmM=today.getMonth();
   ['fiy-month','modal-month'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');});
   const $=id=>document.getElementById(id);
@@ -1001,11 +1002,43 @@ function init(){
   if($('inv-next'))$('inv-next').onclick=()=>{invM++;if(invM>11){invM=0;invY++;}renderInvPage()};
   if($('mf-year-prev'))$('mf-year-prev').onclick=()=>{mfEditYear--;renderMfMonthlyInputs()};
   if($('mf-year-next'))$('mf-year-next').onclick=()=>{mfEditYear++;renderMfMonthlyInputs()};
+  setupSwipeNav();
   applyMaster();autoRegFixed();renderCal();
   document.getElementById('i-date').value=fmtDate(today);
   renderFixedLists();renderPayList();renderGenreList();renderBulkCatList();renderBulkCatBtns();renderBmCal();renderDiscountSelects();renderAllowanceSelects();renderMfDefList();renderIncomeCatSelect();renderIncomeCatList();
 }
 
+function getActiveNavIds(){
+  if(document.getElementById('page-cal')?.classList.contains('active'))return{prev:'hdr-prev',next:'hdr-next'};
+  if(document.getElementById('page-ana')?.classList.contains('active'))return anaSeg==='m'?{prev:'ana-prev',next:'ana-next'}:{prev:'ann-prev',next:'ann-next'};
+  if(document.getElementById('page-salary')?.classList.contains('active'))return salSeg==='m'?{prev:'sal-prev',next:'sal-next'}:{prev:'sal-ann-prev',next:'sal-ann-next'};
+  if(document.getElementById('page-income')?.classList.contains('active')){
+    if(incSeg==='m')return{prev:'inc-prev',next:'inc-next'};
+    if(incSeg==='a')return{prev:'inc-ann-prev',next:'inc-ann-next'};
+    if(incSeg==='i')return{prev:'inv-prev',next:'inv-next'};
+  }
+  return null;
+}
+function setupSwipeNav(){
+  const el=document.querySelector('.scroll');
+  if(!el)return;
+  let sx=0,sy=0,tracking=false;
+  el.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1)return;
+    sx=e.touches[0].clientX;sy=e.touches[0].clientY;tracking=true;
+  },{passive:true});
+  el.addEventListener('touchend',e=>{
+    if(!tracking)return;tracking=false;
+    const t=e.changedTouches[0];
+    const dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;
+    const ids=getActiveNavIds();
+    if(!ids)return;
+    const targetId=dx<0?ids.next:ids.prev;
+    const btn=document.getElementById(targetId);
+    if(btn)btn.click();
+  },{passive:true});
+}
 function showPage(p){
   if(document.activeElement)document.activeElement.blur();
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
@@ -1327,10 +1360,45 @@ function freeSavingsPool(y,m){return cumulativeSurplus(y,m)-totalTransferred();}
 function addSavingsGoal(){
   const name=prompt('貯金目標の名前（例: 車貯金、NISA）');
   if(!name||!name.trim())return;
-  savingsGoals.push({id:uid(),name:name.trim()});
+  const mv=prompt('毎月自動で積み立てる金額（自動積立しない場合は空欄でOK・後から変更できます）','');
+  const monthlyAmount=mv&&mv.trim()!==''?(parseInt(mv)||0):0;
+  savingsGoals.push({id:uid(),name:name.trim(),monthlyAmount,startMonth:ym(today.getFullYear(),today.getMonth())});
   sv('kk_savings_goals',savingsGoals);
+  applyAutoContributions();
   renderM();
   toast('貯金目標を追加しました ✓');
+}
+function editGoalMonthlyAmount(goalId){
+  const g=savingsGoals.find(x=>x.id===goalId);
+  if(!g)return;
+  const v=prompt(`「${g.name}」の毎月の積立額を入力してください（自動積立しない場合は0）\n※変更は今月以降に反映されます`,String(g.monthlyAmount||0));
+  if(v===null)return;
+  g.monthlyAmount=parseInt(v)||0;
+  sv('kk_savings_goals',savingsGoals);
+  applyAutoContributions();
+  renderM();
+  toast('毎月の積立額を更新しました ✓');
+}
+function applyAutoContributions(){
+  const curKey=ym(today.getFullYear(),today.getMonth());
+  let changed=false;
+  savingsGoals.forEach(g=>{
+    if(!g.monthlyAmount||g.monthlyAmount<=0)return;
+    const startKey=g.startMonth||curKey;
+    let [sy,sm]=startKey.split('-').map(Number);sm-=1;
+    let cy=sy,cm=sm,guard=0;
+    while(guard++<600){
+      const key=ym(cy,cm);
+      const already=savingsTransfers.some(t=>t.goalId===g.id&&t.auto&&t.month===key);
+      if(!already){
+        savingsTransfers.push({id:uid(),goalId:g.id,date:key+'-01',amount:g.monthlyAmount,memo:'月次積立（自動）',auto:true,month:key});
+        changed=true;
+      }
+      if(key>=curKey)break;
+      cm++;if(cm>11){cm=0;cy++;}
+    }
+  });
+  if(changed)sv('kk_savings_transfers',savingsTransfers);
 }
 function transferToGoal(goalId,goalName){
   const v=prompt(`${goalName} に積み立てる金額（引き出す場合はマイナスで入力）`,'');
@@ -1343,14 +1411,15 @@ function transferToGoal(goalId,goalName){
   toast('反映しました ✓');
 }
 function delSavingsGoal(goalId){
+  const g=savingsGoals.find(x=>x.id===goalId);
   const bal=goalBalance(goalId);
-  if(bal!==0){toast('残高0円の目標のみ削除できます（先に全額引き出してください）');return;}
-  if(!confirm('この貯金目標を削除しますか？'))return;
-  savingsGoals=savingsGoals.filter(g=>g.id!==goalId);
+  const msg=bal!==0?`「${g?.name||''}」を削除しますか？\n残高¥${bal.toLocaleString()}は繰越貯金に戻ります`:`「${g?.name||''}」を削除しますか？`;
+  if(!confirm(msg))return;
+  savingsGoals=savingsGoals.filter(x=>x.id!==goalId);
   savingsTransfers=savingsTransfers.filter(t=>t.goalId!==goalId);
   sv('kk_savings_goals',savingsGoals);sv('kk_savings_transfers',savingsTransfers);
   renderM();
-  toast('削除しました');
+  toast('削除し、繰越貯金に戻しました');
 }
 function editMonthSurplusOverride(){
   const key=ym(anaY,anaM);
@@ -1362,6 +1431,12 @@ function editMonthSurplusOverride(){
   sv('kk_savings_overrides',savingsOverrides);
   renderM();
   toast('更新しました ✓');
+}
+function toggleGoalHistory(hid){const el=document.getElementById(hid);if(el)el.style.display=el.style.display==='block'?'none':'block';}
+function goalHistoryHtml(goalId){
+  const list=savingsTransfers.filter(t=>t.goalId===goalId).sort((a,b)=>b.date>a.date?1:-1);
+  if(list.length===0)return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:4px">履歴がありません</div>';
+  return list.map(t=>`<div style="display:flex;align-items:center;padding:4px 0;border-bottom:1px solid #f0e5d0;font-size:11px"><div style="flex:1;color:#7a5a2a">${t.date}${t.auto?' ・自動':''}${t.memo&&!t.auto?' ・'+t.memo:''}</div><div style="font-weight:700;color:${t.amount>=0?'#a5793a':'var(--red)'}">${t.amount>=0?'+':''}¥${t.amount.toLocaleString()}</div></div>`).join('');
 }
 function renderSavingsCard(){
   const pool=freeSavingsPool(anaY,anaM);
@@ -1375,7 +1450,7 @@ function renderSavingsCard(){
   const listEl=document.getElementById('sv-goals-list');
   if(listEl){
     if(savingsGoals.length===0){listEl.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">貯金目標はまだありません</div>';}
-    else listEl.innerHTML=savingsGoals.map(g=>{const bal=goalBalance(g.id);return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0dcb0"><div style="flex:1;font-size:13px;font-weight:600;color:#7a5a2a">${g.name}</div><div style="font-size:14px;font-weight:700;color:#a5793a">¥${bal.toLocaleString()}</div><button onclick="transferToGoal('${g.id}','${g.name}')" style="border:1px solid #a5793a;background:none;color:#a5793a;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px">＋積立</button><button onclick="delSavingsGoal('${g.id}')" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button></div>`;}).join('');
+    else listEl.innerHTML=savingsGoals.map(g=>{const bal=goalBalance(g.id);const ma=g.monthlyAmount||0;const hid='gh_'+g.id;return `<div style="padding:7px 0;border-bottom:1px solid #f0dcb0"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:13px;font-weight:600;color:#7a5a2a">${g.name}</div><div style="font-size:14px;font-weight:700;color:#a5793a">¥${bal.toLocaleString()}</div><button onclick="transferToGoal('${g.id}','${g.name}')" style="border:1px solid #a5793a;background:none;color:#a5793a;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px">＋積立</button><button onclick="delSavingsGoal('${g.id}')" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button></div><div style="display:flex;align-items:center;gap:10px;margin-top:2px"><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="editGoalMonthlyAmount('${g.id}')">${ma>0?`月々¥${ma.toLocaleString()}自動積立`:'月次自動積立：なし'}（変更）</div><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="toggleGoalHistory('${hid}')">内訳を見る</div></div><div id="${hid}" style="display:none;margin-top:6px;background:#fffaf0;border-radius:8px;padding:6px 8px">${goalHistoryHtml(g.id)}</div></div>`;}).join('');
   }
 }
 function renderM(){
