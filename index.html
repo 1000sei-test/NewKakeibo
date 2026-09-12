@@ -463,6 +463,17 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:#3a6ea5">累計（全期間）</div><div style="font-size:14px;font-weight:700;color:#2a5a8a" id="ana-inv-cum">¥0</div></div>
         </div>
       </div>
+      <div class="sc" style="grid-column:1/-1;background:#fff8ec;border:1px solid #f0dcb0">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div class="sl" style="color:#a5793a;font-size:13px;font-weight:700">🐖 繰越貯金（自由に使える分）</div>
+          <button onclick="editMonthSurplusOverride()" style="border:none;background:none;color:#a5793a;font-size:12px;cursor:pointer;padding:2px 4px">✎ 今月を修正</button>
+        </div>
+        <div class="sv" style="color:#a5793a;font-size:26px" id="sv-free-pool">¥0</div>
+        <div style="font-size:11px;color:#a5793a;margin-top:2px" id="sv-month-surplus">今月：¥0</div>
+        <div style="font-size:10px;color:#a5793a;margin-top:4px;cursor:pointer;text-decoration:underline;display:inline-block" onclick="setSavingsStartMonth()" id="sv-start-month">開始月：-</div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f0dcb0" id="sv-goals-list"></div>
+        <button onclick="addSavingsGoal()" style="margin-top:8px;border:1px dashed #d9b579;background:none;color:#a5793a;font-size:12px;font-weight:700;cursor:pointer;padding:6px 10px;border-radius:8px;width:100%">＋ 貯金目標を追加（車・NISAなど）</button>
+      </div>
     </div>
     
     <div class="bcard">
@@ -884,6 +895,10 @@ let salaries=safeLS('kk_salaries','{}');
 let salY,salM,salSeg='m',salAnnY;
 let incomes=safeLS('kk_incomes','[]');
 let investments=safeLS('kk_investments','[]');
+let savingsGoals=safeLS('kk_savings_goals','[]');
+let savingsTransfers=safeLS('kk_savings_transfers','[]');
+let savingsOverrides=safeLS('kk_savings_overrides','{}');
+let savingsStartMonth=safeLS('kk_savings_start_month','""');
 let incY,incM,incSeg='m',incAnnY;
 let invY,invM;
 let discountTypes=safeLS('kk_discount_types',JSON.stringify([{id:'dt1',name:'ポイント'},{id:'dt2',name:'クーポン'},{id:'dt3',name:'支給'},{id:'dt4',name:'割り勘'},{id:'dt5',name:'その他'}]));
@@ -1242,6 +1257,127 @@ function saveRecord(){
 }
 function setAnaSeg(s){anaSeg=s;document.getElementById('seg-m').classList.toggle('active',s==='m');document.getElementById('seg-a').classList.toggle('active',s==='a');document.getElementById('ana-m').style.display=s==='m'?'block':'none';document.getElementById('ana-a').style.display=s==='a'?'block':'none';renderAna();}
 function renderAna(){if(anaSeg==='m')renderM();else renderA();}
+function monthExpenseTotal(y,m){
+  const key=ym(y,m);
+  const rr=records.filter(r=>r.date.startsWith(key));
+  const varOut=rr.filter(r=>r.type==='out').reduce((s,r)=>s+r.amount,0);
+  const allFixedTotal=getMfTotal(y,m)+getFixedTotal(y,m);
+  const invMonthTotal=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
+  return varOut+allFixedTotal+invMonthTotal;
+}
+function monthIncomeTotal(y,m){
+  const key=ym(y,m);
+  const rr=records.filter(r=>r.date.startsWith(key));
+  const allowTotal=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
+  const salData=salaries[key]||{};
+  const salNetBase=salData.net||0;
+  const salAddBack=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salData.items?.[s.id]||0),0);
+  const salRealNet=salNetBase+salAddBack+allowTotal;
+  const incomeTotal=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
+  return salRealNet+incomeTotal;
+}
+function monthSurplus(y,m){
+  const key=ym(y,m);
+  if(savingsOverrides[key]!==undefined)return savingsOverrides[key];
+  return monthIncomeTotal(y,m)-monthExpenseTotal(y,m);
+}
+function allMonthKeysWithData(){
+  const s=new Set();
+  records.forEach(r=>r.date&&s.add(r.date.slice(0,7)));
+  incomes.forEach(r=>r.date&&s.add(r.date.slice(0,7)));
+  investments.forEach(r=>r.date&&s.add(r.date.slice(0,7)));
+  Object.keys(salaries).forEach(k=>s.add(k));
+  return s;
+}
+function getSavingsStartKey(){
+  if(savingsStartMonth)return savingsStartMonth;
+  const keys=allMonthKeysWithData();
+  if(keys.size===0)return ym(today.getFullYear(),today.getMonth());
+  return [...keys].sort()[0];
+}
+function setSavingsStartMonth(){
+  const current=getSavingsStartKey();
+  const v=prompt('繰越の集計を開始する年月を入力してください（例: 2026-04）\n※これより前の月は繰越の計算に含まれません',current);
+  if(v===null)return;
+  const mm=v.trim().match(/^(\d{4})[-\/](\d{1,2})$/);
+  if(!mm){toast('「2026-04」の形式で入力してください');return;}
+  const y=parseInt(mm[1]),mo=parseInt(mm[2]);
+  if(mo<1||mo>12){toast('月は1〜12で入力してください');return;}
+  savingsStartMonth=ym(y,mo-1);
+  sv('kk_savings_start_month',savingsStartMonth);
+  renderM();
+  toast('開始月を設定しました ✓');
+}
+function cumulativeSurplus(uptoY,uptoM){
+  const startKey=getSavingsStartKey();
+  const [sy,sm]=startKey.split('-').map(Number);
+  const endKey=ym(uptoY,uptoM);
+  let total=0,cy=sy,cm=sm-1,guard=0;
+  while(guard++<1200){
+    const key=ym(cy,cm);
+    total+=monthSurplus(cy,cm);
+    if(key>=endKey)break;
+    cm++;if(cm>11){cm=0;cy++;}
+  }
+  return total;
+}
+function totalTransferred(){return savingsTransfers.reduce((s,t)=>s+t.amount,0);}
+function goalBalance(goalId){return savingsTransfers.filter(t=>t.goalId===goalId).reduce((s,t)=>s+t.amount,0);}
+function freeSavingsPool(y,m){return cumulativeSurplus(y,m)-totalTransferred();}
+function addSavingsGoal(){
+  const name=prompt('貯金目標の名前（例: 車貯金、NISA）');
+  if(!name||!name.trim())return;
+  savingsGoals.push({id:uid(),name:name.trim()});
+  sv('kk_savings_goals',savingsGoals);
+  renderM();
+  toast('貯金目標を追加しました ✓');
+}
+function transferToGoal(goalId,goalName){
+  const v=prompt(`${goalName} に積み立てる金額（引き出す場合はマイナスで入力）`,'');
+  if(v===null)return;
+  const amount=parseInt(v)||0;
+  if(!amount){toast('金額を入力してください');return;}
+  savingsTransfers.push({id:uid(),goalId,date:fmtDate(today),amount,memo:''});
+  sv('kk_savings_transfers',savingsTransfers);
+  renderM();
+  toast('反映しました ✓');
+}
+function delSavingsGoal(goalId){
+  const bal=goalBalance(goalId);
+  if(bal!==0){toast('残高0円の目標のみ削除できます（先に全額引き出してください）');return;}
+  if(!confirm('この貯金目標を削除しますか？'))return;
+  savingsGoals=savingsGoals.filter(g=>g.id!==goalId);
+  savingsTransfers=savingsTransfers.filter(t=>t.goalId!==goalId);
+  sv('kk_savings_goals',savingsGoals);sv('kk_savings_transfers',savingsTransfers);
+  renderM();
+  toast('削除しました');
+}
+function editMonthSurplusOverride(){
+  const key=ym(anaY,anaM);
+  const current=monthSurplus(anaY,anaM);
+  const v=prompt('今月の黒字/赤字を手動で修正します（自動計算に戻す場合は空欄で保存）',String(current));
+  if(v===null)return;
+  if(v.trim()===''){delete savingsOverrides[key];}
+  else{savingsOverrides[key]=parseInt(v)||0;}
+  sv('kk_savings_overrides',savingsOverrides);
+  renderM();
+  toast('更新しました ✓');
+}
+function renderSavingsCard(){
+  const pool=freeSavingsPool(anaY,anaM);
+  const poolEl=document.getElementById('sv-free-pool');
+  if(poolEl){poolEl.textContent='¥'+pool.toLocaleString();poolEl.style.color=pool<0?'var(--red)':'#a5793a';}
+  const surplus=monthSurplus(anaY,anaM);
+  const sEl=document.getElementById('sv-month-surplus');
+  if(sEl){sEl.textContent=`今月：${surplus>=0?'+':''}¥${surplus.toLocaleString()}`+(savingsOverrides[ym(anaY,anaM)]!==undefined?'（手動修正済み）':'');}
+  const startEl=document.getElementById('sv-start-month');
+  if(startEl){const sk=getSavingsStartKey();const [sy,sm]=sk.split('-').map(Number);startEl.textContent=`開始月：${sy}年${sm}月（タップで変更）`;}
+  const listEl=document.getElementById('sv-goals-list');
+  if(listEl){
+    if(savingsGoals.length===0){listEl.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">貯金目標はまだありません</div>';}
+    else listEl.innerHTML=savingsGoals.map(g=>{const bal=goalBalance(g.id);return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0dcb0"><div style="flex:1;font-size:13px;font-weight:600;color:#7a5a2a">${g.name}</div><div style="font-size:14px;font-weight:700;color:#a5793a">¥${bal.toLocaleString()}</div><button onclick="transferToGoal('${g.id}','${g.name}')" style="border:1px solid #a5793a;background:none;color:#a5793a;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px">＋積立</button><button onclick="delSavingsGoal('${g.id}')" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button></div>`;}).join('');
+  }
+}
 function renderM(){
   const key=ym(anaY,anaM);
   document.getElementById('ana-m-title').textContent=anaY+'年 '+(anaM+1)+'月';
@@ -1388,6 +1524,7 @@ function renderM(){
   });
   document.getElementById('genre-bd').innerHTML=h;
   renderPayBreakdown(rr.filter(r=>r.type==='out'),'pay-bd-m');
+  renderSavingsCard();
 }
 function editCapLimit(g,v){const sel=document.getElementById('cap-genre-sel');if(sel)sel.value=g;const inp=document.getElementById('cap-inp');if(inp)inp.value=v;checkCapBtn();}
 function delCapLimit(g){const key=ym(anaY,anaM);if(capLimits[key])delete capLimits[key][g];sv('kk_cap_limits',capLimits);renderM();toast(`${g} の除外上限を削除しました`);}
@@ -1564,7 +1701,7 @@ function packYear(y){
   Object.keys(mfAmounts||{}).forEach(id=>{const v=ymOfYear(mfAmounts[id],y);if(Object.keys(v).length)mfa[id]=v;});
   return {
     app:'newkakeibo',version:2,exportedAt:new Date().toISOString(),year:y,years:[y],
-    settings:{master,fixed,bulkCats,salItems,discountTypes,allowanceTypes,incomeCats,mfDefs},
+    settings:{master,fixed,bulkCats,salItems,discountTypes,allowanceTypes,incomeCats,mfDefs,savingsGoals,savingsTransfers,savingsOverrides,savingsStartMonth},
     data:{
       records:records.filter(r=>String(r.date||'').startsWith(ys)),
       incomes:incomes.filter(r=>String(r.date||'').startsWith(ys)),
@@ -1681,7 +1818,7 @@ function initBackupUI(){
 /* ---- 復元（年単位ファイル／旧形式の両方に対応・複数選択可） ---- */
 function saveAllData(){
   sv('kk_records',records);sv('kk_budgets',budgets);sv('kk_cap_limits',capLimits);sv('kk_fixed',fixed);
-  sv('kk_master',master);sv('kk_bulkCats',bulkCats);sv('kk_salaries',salaries);sv('kk_incomes',incomes);sv('kk_investments',investments);
+  sv('kk_master',master);sv('kk_bulkCats',bulkCats);sv('kk_salaries',salaries);sv('kk_incomes',incomes);sv('kk_investments',investments);sv('kk_savings_goals',savingsGoals);sv('kk_savings_transfers',savingsTransfers);sv('kk_savings_overrides',savingsOverrides);sv('kk_savings_start_month',savingsStartMonth);
   sv('kk_discount_types',discountTypes);sv('kk_allowance_types',allowanceTypes);sv('kk_sal_items',salItems);
   sv('kk_mf_defs',mfDefs);sv('kk_mf_amounts',mfAmounts);sv('kk_income_cats',incomeCats);
 }
@@ -1696,6 +1833,10 @@ function applySettingsFrom(st){
   if(st.allowanceTypes)allowanceTypes=st.allowanceTypes;
   if(st.incomeCats)incomeCats=st.incomeCats;
   if(st.mfDefs)mfDefs=st.mfDefs;
+  if(st.savingsGoals)savingsGoals=st.savingsGoals;
+  if(st.savingsTransfers)savingsTransfers=st.savingsTransfers;
+  if(st.savingsOverrides)savingsOverrides=st.savingsOverrides;
+  if(st.savingsStartMonth)savingsStartMonth=st.savingsStartMonth;
 }
 function applyYearData(y,d){
   const ys=String(y);
@@ -1741,6 +1882,10 @@ async function importData(e){
       if(data.records)records=data.records;
       if(data.incomes)incomes=data.incomes;
       if(data.investments)investments=data.investments;
+      if(data.savingsGoals)savingsGoals=data.savingsGoals;
+      if(data.savingsTransfers)savingsTransfers=data.savingsTransfers;
+      if(data.savingsOverrides)savingsOverrides=data.savingsOverrides;
+      if(data.savingsStartMonth)savingsStartMonth=data.savingsStartMonth;
       if(data.budgets)budgets=data.budgets;
       if(data.capLimits)capLimits=data.capLimits;
       if(data.salaries)salaries=data.salaries;
