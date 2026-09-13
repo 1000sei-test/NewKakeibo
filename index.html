@@ -472,7 +472,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         <div style="font-size:11px;color:#a5793a;margin-top:2px" id="sv-month-surplus">今月：¥0</div>
         <div style="font-size:10px;color:#a5793a;margin-top:4px;cursor:pointer;text-decoration:underline;display:inline-block" onclick="setSavingsStartMonth()" id="sv-start-month">開始月：-</div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f0dcb0" id="sv-goals-list"></div>
-        <button onclick="addSavingsGoal()" style="margin-top:8px;border:1px dashed #d9b579;background:none;color:#a5793a;font-size:12px;font-weight:700;cursor:pointer;padding:6px 10px;border-radius:8px;width:100%">＋ 貯金目標を追加（車・NISAなど）</button>
+        <button onclick="openGoalSheet()" style="margin-top:8px;border:1px dashed #d9b579;background:none;color:#a5793a;font-size:12px;font-weight:700;cursor:pointer;padding:6px 10px;border-radius:8px;width:100%">＋ 目標貯金を追加（車・NISAなど）</button>
       </div>
     </div>
     
@@ -1357,27 +1357,57 @@ function cumulativeSurplus(uptoY,uptoM){
 function totalTransferred(){return savingsTransfers.reduce((s,t)=>s+t.amount,0);}
 function goalBalance(goalId){return savingsTransfers.filter(t=>t.goalId===goalId).reduce((s,t)=>s+t.amount,0);}
 function freeSavingsPool(y,m){return cumulativeSurplus(y,m)-totalTransferred();}
-function addSavingsGoal(){
-  const name=prompt('貯金目標の名前（例: 車貯金、NISA）');
-  if(!name||!name.trim())return;
-  const mv=prompt('毎月自動で積み立てる金額（自動積立しない場合は空欄でOK・後から変更できます）','');
-  const monthlyAmount=mv&&mv.trim()!==''?(parseInt(mv)||0):0;
-  savingsGoals.push({id:uid(),name:name.trim(),monthlyAmount,startMonth:ym(today.getFullYear(),today.getMonth())});
-  sv('kk_savings_goals',savingsGoals);
-  applyAutoContributions();
-  renderM();
-  toast('貯金目標を追加しました ✓');
+let goalSheetMode='add',goalSheetEditId=null;
+function openGoalSheet(){
+  goalSheetMode='add';goalSheetEditId=null;
+  document.getElementById('goal-sheet-title').textContent='目標貯金を追加';
+  document.getElementById('goal-name-row').style.display='flex';
+  document.getElementById('goal-name').value='';
+  document.getElementById('goal-start').value=ym(today.getFullYear(),today.getMonth());
+  document.getElementById('goal-monthly').value='';
+  checkGoalBtn();
+  document.getElementById('goal-scrim').classList.add('show');
+  document.getElementById('goal-sheet').classList.add('show');
 }
-function editGoalMonthlyAmount(goalId){
+function openGoalEditSheet(goalId){
   const g=savingsGoals.find(x=>x.id===goalId);
   if(!g)return;
-  const v=prompt(`「${g.name}」の毎月の積立額を入力してください（自動積立しない場合は0）\n※変更は今月以降に反映されます`,String(g.monthlyAmount||0));
-  if(v===null)return;
-  g.monthlyAmount=parseInt(v)||0;
+  goalSheetMode='edit';goalSheetEditId=goalId;
+  document.getElementById('goal-sheet-title').textContent=`${g.name} を編集`;
+  document.getElementById('goal-name-row').style.display='none';
+  document.getElementById('goal-start').value=g.startMonth||ym(today.getFullYear(),today.getMonth());
+  document.getElementById('goal-monthly').value=g.monthlyAmount||'';
+  checkGoalBtn();
+  document.getElementById('goal-scrim').classList.add('show');
+  document.getElementById('goal-sheet').classList.add('show');
+}
+function closeGoalSheet(){
+  document.getElementById('goal-scrim').classList.remove('show');
+  document.getElementById('goal-sheet').classList.remove('show');
+}
+function checkGoalBtn(){
+  const btn=document.getElementById('goal-save-btn');
+  if(!btn)return;
+  const ok=goalSheetMode==='edit'||document.getElementById('goal-name').value.trim()!=='';
+  btn.disabled=!ok;btn.style.background=ok?'#a5793a':'#c7c7cc';btn.style.cursor=ok?'pointer':'default';
+}
+function saveGoalSheet(){
+  const startMonth=document.getElementById('goal-start').value||ym(today.getFullYear(),today.getMonth());
+  const monthlyAmount=parseInt(document.getElementById('goal-monthly').value)||0;
+  if(goalSheetMode==='add'){
+    const name=document.getElementById('goal-name').value.trim();
+    if(!name){toast('名前を入力してください');return;}
+    savingsGoals.push({id:uid(),name,monthlyAmount,startMonth});
+    toast('目標貯金を追加しました ✓');
+  }else{
+    const g=savingsGoals.find(x=>x.id===goalSheetEditId);
+    if(g){g.monthlyAmount=monthlyAmount;g.startMonth=startMonth;}
+    toast('更新しました ✓');
+  }
   sv('kk_savings_goals',savingsGoals);
   applyAutoContributions();
+  closeGoalSheet();
   renderM();
-  toast('毎月の積立額を更新しました ✓');
 }
 function applyAutoContributions(){
   const curKey=ym(today.getFullYear(),today.getMonth());
@@ -1390,7 +1420,7 @@ function applyAutoContributions(){
     while(guard++<600){
       const key=ym(cy,cm);
       const already=savingsTransfers.some(t=>t.goalId===g.id&&t.auto&&t.month===key);
-      if(!already){
+      if(!already&&key>=startKey){
         savingsTransfers.push({id:uid(),goalId:g.id,date:key+'-01',amount:g.monthlyAmount,memo:'月次積立（自動）',auto:true,month:key});
         changed=true;
       }
@@ -1400,13 +1430,38 @@ function applyAutoContributions(){
   });
   if(changed)sv('kk_savings_transfers',savingsTransfers);
 }
-function transferToGoal(goalId,goalName){
-  const v=prompt(`${goalName} に積み立てる金額（引き出す場合はマイナスで入力）`,'');
-  if(v===null)return;
-  const amount=parseInt(v)||0;
-  if(!amount){toast('金額を入力してください');return;}
-  savingsTransfers.push({id:uid(),goalId,date:fmtDate(today),amount,memo:''});
+let txGoalId=null,txGoalName='',txMode='add';
+function openTxSheet(goalId,goalName){
+  txGoalId=goalId;txGoalName=goalName;
+  document.getElementById('tx-sheet-title').textContent=goalName;
+  document.getElementById('tx-amt').value='';
+  setTxMode('add');
+  document.getElementById('tx-scrim').classList.add('show');
+  document.getElementById('tx-sheet').classList.add('show');
+}
+function closeTxSheet(){
+  document.getElementById('tx-scrim').classList.remove('show');
+  document.getElementById('tx-sheet').classList.remove('show');
+}
+function setTxMode(m){
+  txMode=m;
+  const addBtn=document.getElementById('tx-mode-add'),subBtn=document.getElementById('tx-mode-sub');
+  addBtn.style.background=m==='add'?'#a5793a':'none';addBtn.style.color=m==='add'?'#fff':'#a5793a';
+  subBtn.style.background=m==='sub'?'#a5793a':'none';subBtn.style.color=m==='sub'?'#fff':'#a5793a';
+}
+function checkTxBtn(){
+  const amt=parseInt(document.getElementById('tx-amt').value)||0;
+  const ok=amt>0;
+  const btn=document.getElementById('tx-save-btn');
+  btn.disabled=!ok;btn.style.background=ok?'#a5793a':'#c7c7cc';btn.style.cursor=ok?'pointer':'default';
+}
+function saveTxSheet(){
+  const amt=parseInt(document.getElementById('tx-amt').value)||0;
+  if(!amt){toast('金額を入力してください');return;}
+  const amount=txMode==='sub'?-amt:amt;
+  savingsTransfers.push({id:uid(),goalId:txGoalId,date:fmtDate(today),amount,memo:''});
   sv('kk_savings_transfers',savingsTransfers);
+  closeTxSheet();
   renderM();
   toast('反映しました ✓');
 }
@@ -1449,8 +1504,8 @@ function renderSavingsCard(){
   if(startEl){const sk=getSavingsStartKey();const [sy,sm]=sk.split('-').map(Number);startEl.textContent=`開始月：${sy}年${sm}月（タップで変更）`;}
   const listEl=document.getElementById('sv-goals-list');
   if(listEl){
-    if(savingsGoals.length===0){listEl.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">貯金目標はまだありません</div>';}
-    else listEl.innerHTML=savingsGoals.map(g=>{const bal=goalBalance(g.id);const ma=g.monthlyAmount||0;const hid='gh_'+g.id;return `<div style="padding:7px 0;border-bottom:1px solid #f0dcb0"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:13px;font-weight:600;color:#7a5a2a">${g.name}</div><div style="font-size:14px;font-weight:700;color:#a5793a">¥${bal.toLocaleString()}</div><button onclick="transferToGoal('${g.id}','${g.name}')" style="border:1px solid #a5793a;background:none;color:#a5793a;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px">＋積立</button><button onclick="delSavingsGoal('${g.id}')" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button></div><div style="display:flex;align-items:center;gap:10px;margin-top:2px"><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="editGoalMonthlyAmount('${g.id}')">${ma>0?`月々¥${ma.toLocaleString()}自動積立`:'月次自動積立：なし'}（変更）</div><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="toggleGoalHistory('${hid}')">内訳を見る</div></div><div id="${hid}" style="display:none;margin-top:6px;background:#fffaf0;border-radius:8px;padding:6px 8px">${goalHistoryHtml(g.id)}</div></div>`;}).join('');
+    if(savingsGoals.length===0){listEl.innerHTML='<div style="font-size:12px;color:var(--muted);text-align:center;padding:6px">目標貯金はまだありません</div>';}
+    else listEl.innerHTML=savingsGoals.map(g=>{const bal=goalBalance(g.id);const ma=g.monthlyAmount||0;const hid='gh_'+g.id;return `<div style="padding:7px 0;border-bottom:1px solid #f0dcb0"><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:13px;font-weight:600;color:#7a5a2a">${g.name}</div><div style="font-size:14px;font-weight:700;color:#a5793a">¥${bal.toLocaleString()}</div><button onclick="openTxSheet('${g.id}','${g.name}')" style="border:1px solid #a5793a;background:none;color:#a5793a;font-size:11px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px">＋積立</button><button onclick="delSavingsGoal('${g.id}')" style="border:none;background:none;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button></div><div style="display:flex;align-items:center;gap:10px;margin-top:2px"><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="openGoalEditSheet('${g.id}')">${ma>0?`月々¥${ma.toLocaleString()}自動積立`:'月次自動積立：なし'}（変更）</div><div style="font-size:10px;color:#a5793a;cursor:pointer;text-decoration:underline" onclick="toggleGoalHistory('${hid}')">内訳を見る</div></div><div id="${hid}" style="display:none;margin-top:6px;background:#fffaf0;border-radius:8px;padding:6px 8px">${goalHistoryHtml(g.id)}</div></div>`;}).join('');
   }
 }
 function renderM(){
@@ -2023,5 +2078,34 @@ if('serviceWorker' in navigator){
   });
 }
 </script>
+
+<div class="sheet-scrim" id="goal-scrim" onclick="closeGoalSheet()"></div>
+<div class="sheet" id="goal-sheet" role="dialog" aria-modal="true" aria-label="目標貯金">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head"><div class="sheet-title" id="goal-sheet-title">目標貯金を追加</div><button class="sheet-close" onclick="closeGoalSheet()">✕</button></div>
+  <div class="icard">
+    <div class="irow" id="goal-name-row"><div class="ilbl">名前</div><input class="ictrl" type="text" id="goal-name" placeholder="例: 車貯金、NISA" oninput="checkGoalBtn()"></div>
+    <div class="irow"><div class="ilbl">開始月</div><input class="ictrl" type="month" id="goal-start"></div>
+    <div class="irow"><div class="ilbl">毎月の積立額</div><input class="ictrl" type="number" inputmode="numeric" pattern="[0-9]*" id="goal-monthly" placeholder="0（自動積立しない場合は空欄）" min="0" oninput="checkGoalBtn()"></div>
+  </div>
+  <button class="save-btn" id="goal-save-btn" onclick="saveGoalSheet()">保存する</button>
+</div>
+
+<div class="sheet-scrim" id="tx-scrim" onclick="closeTxSheet()"></div>
+<div class="sheet" id="tx-sheet" role="dialog" aria-modal="true" aria-label="積立">
+  <div class="sheet-grab"></div>
+  <div class="sheet-head"><div class="sheet-title" id="tx-sheet-title">積立</div><button class="sheet-close" onclick="closeTxSheet()">✕</button></div>
+  <div class="icard">
+    <div class="irow">
+      <div class="ilbl">種別</div>
+      <div style="display:flex;gap:6px;flex:1">
+        <button id="tx-mode-add" onclick="setTxMode('add')" style="flex:1;padding:8px;border:1.5px solid #a5793a;border-radius:8px;background:#a5793a;color:#fff;font-weight:700;font-size:13px;cursor:pointer">＋積立</button>
+        <button id="tx-mode-sub" onclick="setTxMode('sub')" style="flex:1;padding:8px;border:1.5px solid #a5793a;border-radius:8px;background:none;color:#a5793a;font-weight:700;font-size:13px;cursor:pointer">－引き出し</button>
+      </div>
+    </div>
+    <div class="irow"><div class="ilbl">金額</div><input class="ictrl" type="number" inputmode="numeric" pattern="[0-9]*" id="tx-amt" placeholder="0" min="0" oninput="checkTxBtn()"><button onclick="openCalc('tx-amt',checkTxBtn)" style="border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:15px;cursor:pointer;padding:5px 8px;color:#a89880;flex-shrink:0">🧮</button></div>
+  </div>
+  <button class="save-btn" id="tx-save-btn" onclick="saveTxSheet()" disabled style="background:#c7c7cc;cursor:default">保存する</button>
+</div>
 </body>
 </html>
