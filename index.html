@@ -1131,7 +1131,7 @@ function showDP(ds,d){
   document.getElementById('day-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function delRec(i){if(!confirm('削除しますか？'))return;records.splice(i,1);sv('kk_records',records);renderCal();if(selDay)showDP(selDay,parseInt(selDay.split('-')[2]));}
+function delRec(i){if(!confirm('削除しますか？'))return;records.splice(i,1);sv('kk_records',records);renderCal();if(selDay)showDP(selDay,parseInt(selDay.split('-')[2]));if(document.getElementById('bm-grid'))renderBmCal();}
 function checkRecSaveBtn(){const date=document.getElementById('rec-date').value;const title=document.getElementById('rec-title').value.trim();const amt=parseInt(document.getElementById('rec-amt').value)||0;const ok=!!(date&&title&&amt>0);const btn=document.getElementById('rec-save-btn');if(!btn)return;btn.disabled=!ok;btn.style.background=ok?'#007aff':'#c7c7cc';}
 function openRecEdit(i){
   const r=records[i];if(!r)return;
@@ -1161,6 +1161,7 @@ function saveRecEdit(){
   if(!date||!title||!baseAmount){toast('日付・タイトル・金額は必須です');return;}
   records[i]={...records[i],date,title,amount:Math.max(baseAmount-discount,0),originalAmount:baseAmount,allowance,allowanceType,discount,discountType,genre,payment,memo,type:'out',special:isRecSpecial,groupUnder};
   sv('kk_records',records);closeRecModalDirect();renderCal();
+  if(document.getElementById('bm-grid'))renderBmCal();
   if(selDay===date)showDP(date,parseInt(date.split('-')[2]));else{document.getElementById('day-panel').style.display='none';selDay=null;}
   toast('更新しました ✓');
 }
@@ -1752,7 +1753,13 @@ function selectBulkCat(id){selBulkId=id;bmSel.clear();renderBulkCatBtns();render
 function updateBulkInfoPanel(){const info=document.getElementById('bm-selected-info');if(!selBulkId||bulkCats.length===0){info.style.display='none';return;}const c=bulkCats.find(x=>x.id===selBulkId);if(!c){info.style.display='none';return;}info.style.display='block';document.getElementById('bm-sel-name').textContent=c.emoji+' '+c.name;document.getElementById('bm-sel-meta').textContent='デフォルト ¥'+c.price.toLocaleString()+' ・ '+c.genre+' ・ '+c.payment;document.getElementById('bm-price-override').placeholder=c.price;document.getElementById('bm-price-override').value='';}
 function updateBulkRegBtn(){const btn=document.getElementById('bm-reg-btn');if(!btn)return;const cat=bulkCats.find(c=>c.id===selBulkId);const ok=!!(cat&&bmSel.size>0);btn.disabled=!ok;btn.style.background=ok?'var(--accent)':'#d4cfc8';btn.style.cursor=ok?'pointer':'default';if(cat)btn.textContent=ok?`${cat.emoji} ${cat.name}を一括登録（${bmSel.size}日）`:`${cat.emoji} ${cat.name}を一括登録`;}
 function renderBmCal(){document.getElementById('bm-title').textContent=bmY+'年 '+(bmM+1)+'月';const days=['日','月','火','水','木','金','土'];let h=days.map((d,i)=>`<div class="bch ${i===0?'sun':i===6?'sat':''}">${d}</div>`).join('');const first=new Date(bmY,bmM,1).getDay(),last=new Date(bmY,bmM+1,0).getDate();for(let i=0;i<first;i++)h+=`<div class="bcd empty"></div>`;const cat=bulkCats.find(c=>c.id===selBulkId);for(let d=1;d<=last;d++){const ds=ym(bmY,bmM)+'-'+pad(d),dow=new Date(bmY,bmM,d).getDay();const isT=bmY===today.getFullYear()&&bmM===today.getMonth()&&d===today.getDate();const isSel=bmSel.has(ds);const isReg=cat?records.some(r=>r.date===ds&&r.bulkCatId===cat.id):false;h+=`<div class="bcd ${dow===0&&!isSel?'sunD':''} ${dow===6&&!isSel?'satD':''} ${isSel?'sel':''} ${isReg&&!isSel?'reg':''} ${isT?'tod':''}" onclick="togBm('${ds}')">${d}</div>`;}document.getElementById('bm-grid').innerHTML=h;document.getElementById('bm-cnt').textContent=bmSel.size+'日 選択中';updateBulkRegBtn();}
-function togBm(ds){if(bmSel.has(ds))bmSel.delete(ds);else bmSel.add(ds);renderBmCal();}
+function togBm(ds){
+  const cat=bulkCats.find(c=>c.id===selBulkId);
+  const idx=cat?records.findIndex(r=>r.date===ds&&r.bulkCatId===cat.id):-1;
+  if(idx>-1){openRecEdit(idx);return;}
+  if(bmSel.has(ds))bmSel.delete(ds);else bmSel.add(ds);
+  renderBmCal();
+}
 function registerBulk(){if(!selBulkId){toast('カテゴリを選んでください');return;}const cat=bulkCats.find(c=>c.id===selBulkId);if(!cat||bmSel.size===0){toast('日付を選択してください');return;}const overridePrice=parseInt(document.getElementById('bm-price-override').value)||0;const price=overridePrice||cat.price;bmSel.forEach(ds=>records.push({date:ds,title:cat.name,genre:cat.genre,payment:cat.payment,amount:price,memo:'一括登録',type:'out',bulkCatId:cat.id}));sv('kk_records',records);bmSel.clear();renderBmCal();toast(cat.emoji+' 一括登録しました ✓');}
 function setSiTab(t){siTab=t;document.getElementById('sitab-inc').classList.toggle('active',t==='inc');document.getElementById('sitab-ded').classList.toggle('active',t==='ded');document.getElementById('si-inc-wrap').style.display=t==='inc'?'block':'none';document.getElementById('si-ded-wrap').style.display=t==='ded'?'block':'none';}
 function renderSiLists(){['inc','ded'].forEach(type=>{const el=document.getElementById(`si-${type}-list`);if(!el)return;const items=salItems.filter(s=>s.type===type);if(!items.length){el.innerHTML=`<div class="fi-empty">${type==='inc'?'支給':'控除'}項目がありません</div>`;return;}el.innerHTML=items.map((s,i)=>`<div class="fi-item"><div style="display:flex;flex-direction:column;gap:2px;margin-right:6px"><button onclick="moveSalItem('${s.id}',-1)" style="border:none;background:none;font-size:13px;cursor:pointer;color:${i===0?'#ddd':'#a89880'};padding:0;line-height:1" ${i===0?'disabled':''}>▲</button><button onclick="moveSalItem('${s.id}',1)" style="border:none;background:none;font-size:13px;cursor:pointer;color:${i===items.length-1?'#ddd':'#a89880'};padding:0;line-height:1" ${i===items.length-1?'disabled':''}>▼</button></div><div class="fi-left"><div class="fi-name">${nl2br(s.name)}</div>${s.addToNet?'<div class="fi-meta">実質手取りに加算</div>':''}${s.isBonus?'<div class="fi-meta" style="color:#007aff">🎁 賞与にかかる控除</div>':''}</div><button class="fi-edit" onclick="editSalItem('${s.id}')">編集</button><button class="fi-del" onclick="delSalItem('${s.id}')">✕</button></div>`).join('');});}
