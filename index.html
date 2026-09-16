@@ -1118,6 +1118,15 @@ function closeInputSheet(){
   setTimeout(()=>window.scrollTo(0,0),300);
 }
 
+function getEffectiveBudget(key){
+  if(budgets[key]>0)return budgets[key];
+  const keys=Object.keys(budgets).filter(k=>budgets[k]>0).sort();
+  if(keys.length===0)return 0;
+  const before=keys.filter(k=>k<key).pop();
+  if(before)return budgets[before];
+  const after=keys.find(k=>k>key);
+  return after?budgets[after]:0;
+}
 function renderCal(){
   const key=ym(calY,calM);
   document.getElementById('hdr-month-txt').textContent=calY+'年 '+(calM+1)+'月';
@@ -1133,7 +1142,7 @@ function renderCal(){
 
   const mfTotal=getMfTotal(calY,calM);
   const first=new Date(calY,calM,1).getDay(),last=new Date(calY,calM+1,0).getDate();
-  const calBudget=budgets[key]||0;
+  const calBudget=getEffectiveBudget(key);
   const calCapData=capLimits[key]||{};
   let runningSpend=0;
   let h='';
