@@ -376,7 +376,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
-<div class="update-bar" id="update-bar" hidden>🔄 更新があります。アプリを一度閉じて開き直してください</div>
+<div class="update-bar" id="update-bar" hidden onclick="location.reload()">🔄 新しいバージョンに更新します…</div>
 <div class="backup-bar" id="backup-bar" hidden>
   <div class="bb-text" id="backup-text"></div>
   <button class="bb-go" id="backup-go">書き出す</button>
@@ -2209,10 +2209,7 @@ function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
   requestAnimationFrame(()=>bar.classList.add('show'));
-  setTimeout(()=>{
-    bar.classList.add('hide');
-    setTimeout(()=>{bar.hidden=true;bar.classList.remove('show','hide');},450);
-  },4500);
+  setTimeout(()=>{location.reload();},1200);
 }
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{

@@ -4,8 +4,10 @@
    - キャッシュがあれば通信を待たずに即返す（電波が弱くても起動が遅くならない）
    - 同時に裏で更新を取りに行き、取れたら次回起動時に反映される
    - 裏の更新は3秒で打ち切る（弱電波でつかみ続けないため）
+   - install/裏更新とも cache:'no-store' でネットワークから確実に取得する
+     （ブラウザやCDNの古いHTTPキャッシュを掴んで「更新したのに反映されない」を防ぐ）
 */
-const CACHE = 'kakeibo-v70';
+const CACHE = 'kakeibo-v71';
 const REVALIDATE_TIMEOUT = 3000;   // 裏で更新を待つ上限(ms)
 const ASSETS = [
   './',
@@ -19,7 +21,11 @@ const ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
-      .then(c => c.addAll(ASSETS))
+      .then(c => Promise.all(ASSETS.map(url =>
+        fetch(url, { cache: 'no-store' })
+          .then(res => { if (res && res.ok) return c.put(url, res); })
+          .catch(() => {})
+      )))
       .then(() => self.skipWaiting())
       .catch(() => {})
   );
@@ -33,11 +39,11 @@ self.addEventListener('activate', e => {
   );
 });
 
-/* 指定時間で打ち切る fetch */
+/* 指定時間で打ち切る fetch（cache:'no-store' で古いHTTPキャッシュを回避） */
 function fetchWithTimeout(req, ms) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('timeout')), ms);
-    fetch(req).then(res => { clearTimeout(timer); resolve(res); },
+    fetch(req, { cache: 'no-store' }).then(res => { clearTimeout(timer); resolve(res); },
                     err => { clearTimeout(timer); reject(err); });
   });
 }
