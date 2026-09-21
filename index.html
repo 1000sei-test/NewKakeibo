@@ -1598,8 +1598,8 @@ function renderM(){
   const spTotal=rr.filter(r=>r.type==='out'&&r.special).reduce((s,r)=>s+r.amount,0);
   const pureVar=varOut-spTotal;
   const allowMonthTotal=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
-  const workExpShown=Math.min(allowMonthTotal,totalOutWithInv);
-  const privateOut=Math.max(totalOutWithInv-allowMonthTotal,0);
+  const workExpShown=Math.min(allowMonthTotal,varOut);
+  const privateOut=Math.max(totalOutWithInv-workExpShown,0);
   const set2=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   // 支出合計枠（上段）
   set2('ana-out','¥'+(expView==='private'?privateOut:totalOutWithInv).toLocaleString());
@@ -1634,7 +1634,7 @@ function renderM(){
   const fmfCol=document.getElementById('ana-fixed-mf-col');if(fmfCol)fmfCol.style.display=fixedMfTotal>0?'flex':'none';
   const fyCol=document.getElementById('ana-fixed-y-col');if(fyCol)fyCol.style.display=fixedYTotal>0?'flex':'none';
   const allowTotal=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
-  const excessAllow=Math.max(allowTotal-totalOutWithInv,0);
+  const excessAllow=Math.max(allowTotal-varOut,0);
   const salData=salaries[key]||{};
   const salNetBase=salData.net||0;
   const salAddBack=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salData.items?.[s.id]||0),0);
@@ -1771,9 +1771,9 @@ function renderA(){
   document.getElementById('ann-title').textContent=annY+'年';
   let tO=0,tI=0,tMf=0,tVar=0,tAllow=0;const md=[];let mv=0;
   for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const mO=rr.filter(r=>r.type==='out').reduce((s,r)=>s+r.amount,0);const mI=rr.filter(r=>r.type==='in').reduce((s,r)=>s+r.amount,0);const mAllow=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
-  document.getElementById('ann-out').textContent='¥'+(expView==='private'?Math.max(tO-tAllow,0):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
+  document.getElementById('ann-out').textContent='¥'+(expView==='private'?Math.max(tO-Math.min(tAllow,tVar),0):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
   applyExpViewToggle();
-  document.getElementById('ann-work').textContent='¥'+Math.min(tAllow,tO).toLocaleString();document.getElementById('ann-private').textContent='¥'+Math.max(tO-tAllow,0).toLocaleString();
+  document.getElementById('ann-work').textContent='¥'+Math.min(tAllow,tVar).toLocaleString();document.getElementById('ann-private').textContent='¥'+Math.max(tO-Math.min(tAllow,tVar),0).toLocaleString();
   const tInv=investments.filter(r=>r.date.startsWith(String(annY))).reduce((s,r)=>s+r.amount,0);
   const annInvEl=document.getElementById('ann-inv');if(annInvEl)annInvEl.textContent='¥'+tInv.toLocaleString();
   const bm=Math.max(mv,1);let bh='';md.forEach(({m,mO,mI})=>{bh+=`<div class="bcol"><div class="bseg" style="height:${Math.round(mI/bm*90)}px;background:var(--green);opacity:.7"></div><div class="bseg" style="height:${Math.round(mO/bm*90)}px;background:var(--red);opacity:.8"></div><div class="blbl2">${m+1}</div></div>`;});
