@@ -951,7 +951,9 @@ function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}
 function uid(){return Date.now()+'_'+Math.random().toString(36).slice(2,7)}
 function setExpView(mode){if(expView===mode)return;expView=mode;sv('kk_exp_view',expView);renderM();renderA();try{renderCal();}catch(e){}}
 function expAmt(r){return expView==='private'?Math.max((r.amount||0)-(r.allowance||0),0):(r.amount||0);}
-function groupAmt(arr){const amt=arr.reduce((s,r)=>s+(r.amount||0),0);if(expView!=='private')return amt;const allow=arr.reduce((s,r)=>s+(r.allowance||0),0);return Math.max(amt-allow,0);}
+function excessAmt(r){return Math.max((r.allowance||0)-(r.amount||0),0);}
+function offsetAmt(r){return Math.min(r.allowance||0,r.amount||0);}
+function groupAmt(arr){return arr.reduce((s,r)=>s+expAmt(r),0);}
 function applyExpViewToggle(){document.querySelectorAll('.ev-btn').forEach(b=>{const on=b.dataset.mode===expView;b.style.background=on?'#fff':'none';b.style.boxShadow=on?'0 1px 2px rgba(0,0,0,.15)':'none';});}
 function toggleMemoRow(mid){const el=document.getElementById(mid);if(el)el.style.display=el.style.display==='block'?'none':'block';}
 function memoDetailRow(r){
@@ -1132,15 +1134,14 @@ function renderCal(){
   const key=ym(calY,calM);
   document.getElementById('hdr-month-txt').textContent=calY+'年 '+(calM+1)+'月';
   const mRecs=records.filter(r=>r.date.startsWith(key));
-  const workExp=mRecs.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
-  const rawExp=mRecs.filter(r=>r.type==='out').reduce((s,r)=>s+(r.amount||0),0);
-  const varExp=Math.max(rawExp-workExp,0);
+  const mOutRecs=mRecs.filter(r=>r.type==='out');
+  const varExp=mOutRecs.reduce((s,r)=>s+Math.max((r.amount||0)-(r.allowance||0),0),0);
+  const workOffset=mOutRecs.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);
   document.getElementById('hdr-exp').textContent=varExp.toLocaleString();
   const hdrWorkWrap=document.getElementById('hdr-work-wrap');
   if(hdrWorkWrap){
-    const workExpShownCal=Math.min(workExp,rawExp);
-    hdrWorkWrap.style.display=workExpShownCal>0?'inline':'none';
-    hdrWorkWrap.textContent=workExpShownCal>0?` （💼仕事 ¥${workExpShownCal.toLocaleString()}除く）`:'';
+    hdrWorkWrap.style.display=workOffset>0?'inline':'none';
+    hdrWorkWrap.textContent=workOffset>0?` （💼仕事 ¥${workOffset.toLocaleString()}除く）`:'';
   }
 
   const mfTotal=getMfTotal(calY,calM);
@@ -1155,7 +1156,7 @@ function renderCal(){
     const dO=rr.filter(r=>r.type==='out').reduce((s,r)=>s+r.amount,0);
     const dI=rr.filter(r=>r.type==='in').reduce((s,r)=>s+r.amount,0);
     const dBudgetRecs=rr.filter(r=>r.type==='out'&&!r.special&&!calCapData[r.genre]);
-    const dBudgetSpend=Math.max(dBudgetRecs.reduce((s,r)=>s+(r.amount||0),0)-dBudgetRecs.reduce((s,r)=>s+(r.allowance||0),0),0);
+    const dBudgetSpend=dBudgetRecs.reduce((s,r)=>s+Math.max((r.amount||0)-(r.allowance||0),0),0);
     const wasOver=calBudget>0&&runningSpend>calBudget;
     runningSpend+=dBudgetSpend;
     const isOver=calBudget>0&&runningSpend>calBudget;
@@ -1597,16 +1598,18 @@ function renderM(){
   const fixedMfTotal=getMfTotal(anaY,anaM);
   const spTotal=rr.filter(r=>r.type==='out'&&r.special).reduce((s,r)=>s+r.amount,0);
   const pureVar=varOut-spTotal;
-  const allowMonthTotal=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
-  const workExpShown=Math.min(allowMonthTotal,varOut);
-  const privateOut=Math.max(totalOutWithInv-workExpShown,0);
+  const outRecsM=rr.filter(r=>r.type==='out');
+  const allowMonthTotal=outRecsM.reduce((s,r)=>s+(r.allowance||0),0);
+  const workExpShown=outRecsM.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);
+  const monthExcessAllow=outRecsM.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);
+  const privateOut=totalOutWithInv-workExpShown;
   const set2=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   // 支出合計枠（上段）
   set2('ana-out','¥'+(expView==='private'?privateOut:totalOutWithInv).toLocaleString());
   const outNoteEl=document.getElementById('ana-out-note');
   if(outNoteEl){
     outNoteEl.style.display=expView==='private'?'block':'none';
-    outNoteEl.textContent=allowMonthTotal>totalOutWithInv?`💼 仕事分（手当て）を除いた金額です（手当てが支出額より多い分は総収入側に加算されます）`:`💼 仕事分（手当て）を除いた金額です`;
+    outNoteEl.textContent=monthExcessAllow>0?`💼 仕事分（手当て）を除いた金額です（手当てが支出額より多い分は総収入側に加算されます）`:`💼 仕事分（手当て）を除いた金額です`;
   }
   applyExpViewToggle();
   set2('ana-work','¥'+workExpShown.toLocaleString());
@@ -1633,17 +1636,15 @@ function renderM(){
   const fmCol=document.getElementById('ana-fixed-m-col');if(fmCol)fmCol.style.display=fixedMTotal>0?'flex':'none';
   const fmfCol=document.getElementById('ana-fixed-mf-col');if(fmfCol)fmfCol.style.display=fixedMfTotal>0?'flex':'none';
   const fyCol=document.getElementById('ana-fixed-y-col');if(fyCol)fyCol.style.display=fixedYTotal>0?'flex':'none';
-  const allowTotal=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);
-  const excessAllow=Math.max(allowTotal-varOut,0);
   const salData=salaries[key]||{};
   const salNetBase=salData.net||0;
   const salAddBack=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salData.items?.[s.id]||0),0);
-  const salNetShown=salNetBase+salAddBack+(expView==='all'?allowTotal:excessAllow);
+  const salNetShown=salNetBase+salAddBack+(expView==='all'?allowMonthTotal:monthExcessAllow);
   const incomeTotal=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const grandIncomeTotal=salNetShown+incomeTotal;
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('ana-sal-net','¥'+salNetShown.toLocaleString());set('ana-grand-total','¥'+grandIncomeTotal.toLocaleString());set('ana-income-sub','¥'+incomeTotal.toLocaleString()+(incomeTotal===0?' (未入力)':''));set('ana-allowance-sub','¥'+allowTotal.toLocaleString());
-  const salNetLblEl=document.getElementById('ana-sal-net-lbl');if(salNetLblEl)salNetLblEl.textContent=expView==='all'?'実質手取り（手当て込）':(excessAllow>0?'実質手取り（超過分の手当て込）':'実質手取り');
+  set('ana-sal-net','¥'+salNetShown.toLocaleString());set('ana-grand-total','¥'+grandIncomeTotal.toLocaleString());set('ana-income-sub','¥'+incomeTotal.toLocaleString()+(incomeTotal===0?' (未入力)':''));set('ana-allowance-sub','¥'+allowMonthTotal.toLocaleString());
+  const salNetLblEl=document.getElementById('ana-sal-net-lbl');if(salNetLblEl)salNetLblEl.textContent=expView==='all'?'実質手取り（手当て込）':(monthExcessAllow>0?'実質手取り（超過分の手当て込）':'実質手取り');
   const grandNoteEl=document.getElementById('ana-grand-note');if(grandNoteEl)grandNoteEl.style.display=(expView==='private'&&workExpShown>0)?'block':'none';
   const invMonthTotal=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const invCumTotal=investments.reduce((s,r)=>s+r.amount,0);
@@ -1669,25 +1670,22 @@ function renderM(){
   if(budget>0){const pct=Math.min(totalVarSpend/budget*100,100),over=totalVarSpend>budget;document.getElementById('b-fill').style.width=pct+'%';document.getElementById('b-fill').style.background=over?'#ff3b30':pct>80?'#ff9500':'#34c759';document.getElementById('b-pct').textContent=Math.round(totalVarSpend/budget*100)+'%';const spNote=specialTotal>0?` ／ 特別 ¥${specialTotal.toLocaleString()} 除く`:'';const exNote=capExcludeTotal>0?` ／ 除外 ¥${capExcludeTotal.toLocaleString()}`:'';document.getElementById('b-sub').textContent='変動費 ¥'+totalVarSpend.toLocaleString()+' / 予算 ¥'+budget.toLocaleString()+(over?' ⚠ 超過':'')+spNote+exNote;}
   else{document.getElementById('b-fill').style.width='0%';document.getElementById('b-pct').textContent='-';document.getElementById('b-sub').textContent='予算未設定';}
   // ジャンル別（月額固定費を別エントリで追加）
-  const gmRaw={},gmSpRaw={};
+  const gmAll={},gmSp={};
   const allChildren=Object.values(master.genreChildren).flat();
   const hiddenGenres=new Set(allChildren.filter(k=>k.startsWith('g:')).map(k=>k.slice(2)));
   const hiddenBulkIds=new Set(allChildren.filter(k=>k.startsWith('b:')).map(k=>k.slice(2)));
   const childToParent={};
   Object.entries(master.genreChildren).forEach(([parent,kids])=>{kids.forEach(k=>childToParent[k]=parent);});
-  const addG=(map,g,r)=>{if(!map[g])map[g]={amt:0,allow:0};map[g].amt+=(r.amount||0);map[g].allow+=(r.allowance||0);};
   rr.filter(r=>r.type==='out').forEach(r=>{
+    const amt=expAmt(r);
     let g=r.genre;
     if(r.groupUnder)g=r.groupUnder;
     else if(r.bulkCatId&&hiddenBulkIds.has(r.bulkCatId)){const parent=childToParent[`b:${r.bulkCatId}`];if(!parent)return;g=parent;}
     else if(hiddenGenres.has(r.genre)){const parent=childToParent[`g:${r.genre}`];if(!parent)return;g=parent;}
-    addG(gmRaw,g,r);if(r.special)addG(gmSpRaw,g,r);
+    gmAll[g]=(gmAll[g]||0)+amt;if(r.special)gmSp[g]=(gmSp[g]||0)+amt;
   });
-  const netOf=(map,g)=>{const e=map[g];if(!e)return 0;return expView==='private'?Math.max(e.amt-e.allow,0):e.amt;};
   // 固定費（月払い・年払い・月額変動）をまとめて「🔒固定費」として追加
-  if(allFixedTotal>0)gmRaw['🔒固定費']={amt:(gmRaw['🔒固定費']?.amt||0)+allFixedTotal,allow:gmRaw['🔒固定費']?.allow||0};
-  const gmAll={};Object.keys(gmRaw).forEach(g=>gmAll[g]=netOf(gmRaw,g));
-  const gmSp={};Object.keys(gmSpRaw).forEach(g=>gmSp[g]=netOf(gmSpRaw,g));
+  if(allFixedTotal>0)gmAll['🔒固定費']=(gmAll['🔒固定費']||0)+allFixedTotal;
   const sorted=Object.entries(gmAll).sort((a,b)=>b[1]-a[1]);const maxG=sorted[0]?.[1]||1;
   let h='';
   if(sorted.length===0)h='<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">支出データがありません</div>';
@@ -1769,11 +1767,11 @@ function saveCapLimit(){const key=ym(anaY,anaM);const g=document.getElementById(
 function saveBudget(){const key=ym(anaY,anaM),val=parseInt(document.getElementById('b-inp').value)||0;budgets[key]=val;sv('kk_budgets',budgets);renderM();renderCal();toast('予算を保存しました ✓');}
 function renderA(){
   document.getElementById('ann-title').textContent=annY+'年';
-  let tO=0,tI=0,tMf=0,tVar=0,tAllow=0;const md=[];let mv=0;
-  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const mO=rr.filter(r=>r.type==='out').reduce((s,r)=>s+r.amount,0);const mI=rr.filter(r=>r.type==='in').reduce((s,r)=>s+r.amount,0);const mAllow=rr.filter(r=>r.type==='out').reduce((s,r)=>s+(r.allowance||0),0);const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
-  document.getElementById('ann-out').textContent='¥'+(expView==='private'?Math.max(tO-Math.min(tAllow,tVar),0):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
+  let tO=0,tI=0,tMf=0,tVar=0,tAllow=0,tOffset=0;const md=[];let mv=0;
+  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const outRecsY=rr.filter(r=>r.type==='out');const mO=outRecsY.reduce((s,r)=>s+r.amount,0);const mI=rr.filter(r=>r.type==='in').reduce((s,r)=>s+r.amount,0);const mAllow=outRecsY.reduce((s,r)=>s+(r.allowance||0),0);const mOffset=outRecsY.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;tOffset+=mOffset;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
+  document.getElementById('ann-out').textContent='¥'+(expView==='private'?(tO-tOffset):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
   applyExpViewToggle();
-  document.getElementById('ann-work').textContent='¥'+Math.min(tAllow,tVar).toLocaleString();document.getElementById('ann-private').textContent='¥'+Math.max(tO-Math.min(tAllow,tVar),0).toLocaleString();
+  document.getElementById('ann-work').textContent='¥'+tOffset.toLocaleString();document.getElementById('ann-private').textContent='¥'+(tO-tOffset).toLocaleString();
   const tInv=investments.filter(r=>r.date.startsWith(String(annY))).reduce((s,r)=>s+r.amount,0);
   const annInvEl=document.getElementById('ann-inv');if(annInvEl)annInvEl.textContent='¥'+tInv.toLocaleString();
   const bm=Math.max(mv,1);let bh='';md.forEach(({m,mO,mI})=>{bh+=`<div class="bcol"><div class="bseg" style="height:${Math.round(mI/bm*90)}px;background:var(--green);opacity:.7"></div><div class="bseg" style="height:${Math.round(mO/bm*90)}px;background:var(--red);opacity:.8"></div><div class="blbl2">${m+1}</div></div>`;});
