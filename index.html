@@ -450,6 +450,11 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-special-col2"><div style="font-size:10px;color:var(--orange)">⚡ 特別支出</div><div style="font-size:14px;font-weight:700;color:var(--orange)" id="ana-special2">¥0</div></div>
         </div>
       </div>
+      <div class="sc" style="grid-column:1/-1;background:#eef7f0;border:1px solid #b8dcc0;display:none" id="ana-discount-card">
+        <div class="sl" style="color:#3d7a52">🎁 差し引きでお得した額</div>
+        <div class="sv" style="color:#3d7a52" id="ana-discount-total">¥0</div>
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid #b8dcc0;display:flex;flex-wrap:wrap;gap:10px" id="ana-discount-breakdown"></div>
+      </div>
       <div class="sc" style="grid-column:1/-1;background:#f5f0ff;border:1px solid #d8c0f0">
         <div class="sl" style="color:var(--purple)">🔒 固定費合計</div>
         <div class="sv" style="color:var(--purple)" id="ana-mf2">¥0</div>
@@ -552,6 +557,12 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <div class="asc"><div class="asl">📈 年間投資額</div><div class="asv" style="color:#2a5a8a" id="ann-inv">¥0</div></div>
       <div class="asc"><div class="asl">🏠 プライベート支出</div><div class="asv" style="color:#5a8a5a" id="ann-private">¥0</div></div>
       <div class="asc"><div class="asl">💼 仕事（手当て）</div><div class="asv" style="color:#4a70a8" id="ann-work">¥0</div></div>
+      <div class="asc"><div class="asl">🎁 差し引き合計</div><div class="asv" style="color:#3d7a52" id="ann-discount">¥0</div></div>
+    </div>
+    <div class="scard" style="background:#eef7f0;border:1px solid #b8dcc0;display:none;margin-bottom:14px" id="ann-discount-card">
+      <div class="sl" style="color:#3d7a52">🎁 差し引きでお得した額（年間）</div>
+      <div class="sv" style="color:#3d7a52" id="ann-discount-total">¥0</div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #b8dcc0;display:flex;flex-wrap:wrap;gap:10px" id="ann-discount-breakdown"></div>
     </div>
     <div class="bchart">
       <div class="bchart-t">月別推移</div>
@@ -1628,6 +1639,20 @@ function renderM(){
   set2('ana-special2','¥'+spTotal.toLocaleString());
   const spCol2=document.getElementById('ana-special-col2');
   if(spCol2)spCol2.style.display=spTotal>0?'flex':'none';
+  // 差し引き（お得額）カード
+  const discOutRecs=rr.filter(r=>r.type==='out'&&r.discount>0);
+  const discTotal=discOutRecs.reduce((s,r)=>s+(r.discount||0),0);
+  const discCard=document.getElementById('ana-discount-card');
+  if(discCard){
+    discCard.style.display=discTotal>0?'block':'none';
+    if(discTotal>0){
+      set2('ana-discount-total','¥'+discTotal.toLocaleString());
+      const byType={};
+      discOutRecs.forEach(r=>{const name=discountTypes.find(d=>d.id===r.discountType)?.name||'種別なし';byType[name]=(byType[name]||0)+r.discount;});
+      const bd=document.getElementById('ana-discount-breakdown');
+      if(bd)bd.innerHTML=Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([name,v])=>`<div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:var(--muted)">${name}</div><div style="font-size:14px;font-weight:700;color:#3d7a52">¥${v.toLocaleString()}</div></div>`).join('');
+    }
+  }
   // 固定費合計枠
   set2('ana-mf2','¥'+allFixedTotal.toLocaleString());
   set2('ana-fixed-m-sub',fixedMTotal>0?'¥'+fixedMTotal.toLocaleString():'¥0');
@@ -1774,6 +1799,21 @@ function renderA(){
   document.getElementById('ann-work').textContent='¥'+tOffset.toLocaleString();document.getElementById('ann-private').textContent='¥'+(tO-tOffset).toLocaleString();
   const tInv=investments.filter(r=>r.date.startsWith(String(annY))).reduce((s,r)=>s+r.amount,0);
   const annInvEl=document.getElementById('ann-inv');if(annInvEl)annInvEl.textContent='¥'+tInv.toLocaleString();
+  // 差し引き（お得額）年間集計
+  const yearDiscRecs=records.filter(r=>r.date.startsWith(String(annY))&&r.type==='out'&&r.discount>0);
+  const yearDiscTotal=yearDiscRecs.reduce((s,r)=>s+(r.discount||0),0);
+  const annDiscEl=document.getElementById('ann-discount');if(annDiscEl)annDiscEl.textContent='¥'+yearDiscTotal.toLocaleString();
+  const annDiscCard=document.getElementById('ann-discount-card');
+  if(annDiscCard){
+    annDiscCard.style.display=yearDiscTotal>0?'block':'none';
+    if(yearDiscTotal>0){
+      document.getElementById('ann-discount-total').textContent='¥'+yearDiscTotal.toLocaleString();
+      const byTypeY={};
+      yearDiscRecs.forEach(r=>{const name=discountTypes.find(d=>d.id===r.discountType)?.name||'種別なし';byTypeY[name]=(byTypeY[name]||0)+r.discount;});
+      const bdy=document.getElementById('ann-discount-breakdown');
+      if(bdy)bdy.innerHTML=Object.entries(byTypeY).sort((a,b)=>b[1]-a[1]).map(([name,v])=>`<div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:var(--muted)">${name}</div><div style="font-size:14px;font-weight:700;color:#3d7a52">¥${v.toLocaleString()}</div></div>`).join('');
+    }
+  }
   const bm=Math.max(mv,1);let bh='';md.forEach(({m,mO,mI})=>{bh+=`<div class="bcol"><div class="bseg" style="height:${Math.round(mI/bm*90)}px;background:var(--green);opacity:.7"></div><div class="bseg" style="height:${Math.round(mO/bm*90)}px;background:var(--red);opacity:.8"></div><div class="blbl2">${m+1}</div></div>`;});
   document.getElementById('ann-bars').innerHTML=bh;
   const maxO=Math.max(...md.map(d=>d.mO),1);let th='';

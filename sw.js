@@ -7,7 +7,7 @@
    - install/裏更新とも cache:'no-store' でネットワークから確実に取得する
      （ブラウザやCDNの古いHTTPキャッシュを掴んで「更新したのに反映されない」を防ぐ）
 */
-const CACHE = 'kakeibo-v73';
+const CACHE = 'kakeibo-v75';
 const REVALIDATE_TIMEOUT = 3000;   // 裏で更新を待つ上限(ms)
 const ASSETS = [
   './',
