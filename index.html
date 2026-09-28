@@ -1115,8 +1115,8 @@ function showPage(p){
   try{
     if(p==='cal'){calY=today.getFullYear();calM=today.getMonth();renderCal();}
     if(p==='ana'){anaY=today.getFullYear();anaM=today.getMonth();annY=today.getFullYear();renderAna();}
-    if(p==='salary')renderSalaryPage();
-    if(p==='income'){renderIncomeCatSelect();renderIncomePage();if(incSeg==='i')renderInvPage();}
+    if(p==='salary'){salY=today.getFullYear();salM=today.getMonth();salAnnY=today.getFullYear();renderSalaryPage();}
+    if(p==='income'){incY=today.getFullYear();incM=today.getMonth();incAnnY=today.getFullYear();invY=today.getFullYear();invM=today.getMonth();renderIncomeCatSelect();renderIncomePage();if(incSeg==='i')renderInvPage();}
     if(p==='settings'){renderFixedLists();renderPayList();renderGenreList();renderDiscountTypeList();renderAllowanceTypeList();renderDiscountSelects();renderAllowanceSelects();renderSiLists();renderBulkCatList();renderBulkCatBtns();renderBmCal();applyMaster();renderMfDefList();renderIncomeCatList();renderBackupPanel();}
   }catch(e){console.error(e);}
 }
@@ -1403,7 +1403,8 @@ function monthIncomeTotal(y,m){
   const salData=salaries[key]||{};
   const salNetBase=salData.net||0;
   const salAddBack=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salData.items?.[s.id]||0),0);
-  const salRealNet=salNetBase+salAddBack+allowTotal;
+  const salAllowH=allowanceTypes.reduce((s,a)=>s+(salData.allowances?.[a.id]||0),0);
+  const salRealNet=salNetBase+salAddBack+allowTotal+salAllowH;
   const incomeTotal=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   return salRealNet+incomeTotal;
 }
@@ -1678,12 +1679,13 @@ function renderM(){
   const salData=salaries[key]||{};
   const salNetBase=salData.net||0;
   const salAddBack=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salData.items?.[s.id]||0),0);
-  const salNetShown=salNetBase+salAddBack+(expView==='all'?allowMonthTotal:monthExcessAllow);
+  const salAllowM=allowanceTypes.reduce((s,a)=>s+(salData.allowances?.[a.id]||0),0);
+  const salNetShown=salNetBase+salAddBack+salAllowM+(expView==='all'?allowMonthTotal:monthExcessAllow);
   const incomeTotal=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const grandIncomeTotal=salNetShown+incomeTotal;
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
-  set('ana-sal-net','¥'+salNetShown.toLocaleString());set('ana-grand-total','¥'+grandIncomeTotal.toLocaleString());set('ana-income-sub','¥'+incomeTotal.toLocaleString()+(incomeTotal===0?' (未入力)':''));set('ana-allowance-sub','¥'+allowMonthTotal.toLocaleString());
-  const salNetLblEl=document.getElementById('ana-sal-net-lbl');if(salNetLblEl)salNetLblEl.textContent=expView==='all'?'実質手取り（手当て込）':(monthExcessAllow>0?'実質手取り（超過分の手当て込）':'実質手取り');
+  set('ana-sal-net','¥'+salNetShown.toLocaleString());set('ana-grand-total','¥'+grandIncomeTotal.toLocaleString());set('ana-income-sub','¥'+incomeTotal.toLocaleString()+(incomeTotal===0?' (未入力)':''));set('ana-allowance-sub','¥'+(allowMonthTotal+salAllowM).toLocaleString());
+  const salNetLblEl=document.getElementById('ana-sal-net-lbl');if(salNetLblEl)salNetLblEl.textContent=expView==='all'?'実質手取り（手当て込）':((monthExcessAllow>0||salAllowM>0)?'実質手取り（入力・超過分の手当て込）':'実質手取り');
   const grandNoteEl=document.getElementById('ana-grand-note');if(grandNoteEl)grandNoteEl.style.display=(expView==='private'&&workExpShown>0)?'block':'none';
   const invMonthTotal=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const invCumTotal=investments.reduce((s,r)=>s+r.amount,0);
@@ -1807,7 +1809,7 @@ function saveBudget(){const key=ym(anaY,anaM),val=parseInt(document.getElementBy
 function renderA(){
   document.getElementById('ann-title').textContent=annY+'年';
   let tO=0,tI=0,tMf=0,tVar=0,tAllow=0,tOffset=0;const md=[];let mv=0;
-  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const outRecsY=rr.filter(r=>r.type==='out');const mO=outRecsY.reduce((s,r)=>s+r.amount,0);const mAllow=outRecsY.reduce((s,r)=>s+(r.allowance||0),0);const mOffset=outRecsY.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);const mExcess=outRecsY.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);const salDataY=salaries[key]||{};const salNetBaseY=salDataY.net||0;const salAddBackY=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salDataY.items?.[s.id]||0),0);const salNetShownY=salNetBaseY+salAddBackY+(expView==='all'?mAllow:mExcess);const mSideIncome=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);const mI=salNetShownY+mSideIncome;const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;tOffset+=mOffset;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
+  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const outRecsY=rr.filter(r=>r.type==='out');const mO=outRecsY.reduce((s,r)=>s+r.amount,0);const mAllow=outRecsY.reduce((s,r)=>s+(r.allowance||0),0);const mOffset=outRecsY.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);const mExcess=outRecsY.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);const salDataY=salaries[key]||{};const salNetBaseY=salDataY.net||0;const salAddBackY=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salDataY.items?.[s.id]||0),0);const salAllowY=allowanceTypes.reduce((s,a)=>s+(salDataY.allowances?.[a.id]||0),0);const salNetShownY=salNetBaseY+salAddBackY+salAllowY+(expView==='all'?mAllow:mExcess);const mSideIncome=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);const mI=salNetShownY+mSideIncome;const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;tOffset+=mOffset;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
   document.getElementById('ann-out').textContent='¥'+(expView==='private'?(tO-tOffset):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
   applyExpViewToggle();
   document.getElementById('ann-work').textContent='¥'+tOffset.toLocaleString();document.getElementById('ann-private').textContent='¥'+(tO-tOffset).toLocaleString();
