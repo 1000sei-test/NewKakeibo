@@ -2247,21 +2247,21 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
+const APP_VERSION='2026-09-29-1'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
   requestAnimationFrame(()=>bar.classList.add('show'));
   setTimeout(()=>{location.reload();},1200);
 }
+(function checkAppVersion(){
+  const prev=localStorage.getItem('kk_app_version');
+  localStorage.setItem('kk_app_version',APP_VERSION);
+  if(prev&&prev!==APP_VERSION)showUpdateBanner();
+})();
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    // すでにSWに制御されていたページで、あとから制御が切り替わった＝新バージョンが適用された
-    const hadController=!!navigator.serviceWorker.controller;
-    let notified=false;
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(hadController&&!notified){notified=true;showUpdateBanner();}
-    });
   });
 }
 </script>
