@@ -426,15 +426,9 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <div class="sc" style="grid-column:1/-1;background:#fff0f0;border:1px solid #f0b0a0">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <div class="sl" style="color:var(--red)">支出合計</div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-            <div style="display:flex;background:#f5dcd6;border-radius:8px;padding:2px">
-              <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
-              <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
-            </div>
-            <div style="display:flex;background:#f5dcd6;border-radius:8px;padding:2px">
-              <button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button>
-              <button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button>
-            </div>
+          <div style="display:flex;background:#f5dcd6;border-radius:8px;padding:2px">
+            <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
+            <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
           </div>
         </div>
         <div class="sv" style="color:var(--red);font-size:26px" id="ana-out">¥0</div>
@@ -537,7 +531,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
     <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>ジャンル別支出</span><span style="font-size:10px;font-weight:400;color:#4a70a8" id="genre-bd-note"></span></div><div id="genre-bd"></div></div>
-    <div class="gcard"><div class="gcard-t">💳 支払い方法別支出</div><div id="pay-bd-m"></div></div>
+    <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>💳 支払い方法別支出</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button><button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button></div></div><div id="pay-bd-m"></div></div>
   </div>
   <div id="ana-a" style="display:none">
     <div class="anav">
@@ -574,7 +568,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <div class="bars" id="ann-bars"></div>
     </div>
     <div class="mtcard"><div class="mtcard-t">月別一覧</div><div id="ann-table"></div></div>
-    <div class="gcard"><div class="gcard-t">💳 支払い方法別支出（年間）</div><div id="pay-bd-a"></div></div>
+    <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>💳 支払い方法別支出（年間）</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button><button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button></div></div><div id="pay-bd-a"></div></div>
   </div>
 </div>
 </div>
@@ -953,7 +947,7 @@ let discountTypes=safeLS('kk_discount_types',JSON.stringify([{id:'dt1',name:'ポ
 let allowanceTypes=safeLS('kk_allowance_types',JSON.stringify([{id:'at1',name:'出張交通費'},{id:'at2',name:'出張昼食代'},{id:'at3',name:'業務立替'},{id:'at4',name:'その他手当て'}]));
 let incomeCats=safeLS('kk_income_cats',JSON.stringify(['メルカリ','副業','フリーランス','せどり','投資','その他']));
 let expView=safeLS('kk_exp_view','"private"');
-let expFixedView=safeLS('kk_fix_view','"all"');
+let expFixedView=safeLS('kk_fix_view','"var"');
 let calY,calM,anaY,anaM,annY,bmY,bmM;
 let bmSel=new Set(),selDay=null,anaSeg='m',ftab='m';
 const today=new Date();
@@ -1611,7 +1605,7 @@ function renderM(){
   const mfTotal=getMfTotal(anaY,anaM);
   const fixedTotal=getFixedTotal(anaY,anaM);
   const allFixedTotal=mfTotal+fixedTotal;
-  const totalOut=varOut+(expFixedView==='all'?allFixedTotal:0);
+  const totalOut=varOut+allFixedTotal;
   const invMonthTotalForOut=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const totalOutWithInv=totalOut+invMonthTotalForOut;
   // 固定費内訳
@@ -1634,7 +1628,6 @@ function renderM(){
     outNoteEl.textContent=monthExcessAllow>0?`💼 仕事分（手当て）を除いた金額です（手当てが支出額より多い分は総収入側に加算されます）`:`💼 仕事分（手当て）を除いた金額です`;
   }
   applyExpViewToggle();
-  applyFixedViewToggle();
   set2('ana-work','¥'+workExpShown.toLocaleString());
   set2('ana-out-inv','¥'+invMonthTotalForOut.toLocaleString());
   const outInvCol=document.getElementById('ana-out-inv-col');
@@ -1642,8 +1635,6 @@ function renderM(){
   set2('ana-var-pure','¥'+pureVar.toLocaleString());
   set2('ana-special','¥'+spTotal.toLocaleString());
   set2('ana-mf','¥'+allFixedTotal.toLocaleString());
-  const mfCol=document.getElementById('ana-mf-col');
-  if(mfCol)mfCol.style.opacity=expFixedView==='all'?'1':'.4';
   const spCol=document.getElementById('ana-special-col');
   if(spCol)spCol.style.display=spTotal>0?'flex':'none';
   // 変動費合計枠
@@ -1796,7 +1787,7 @@ function renderM(){
   });
   document.getElementById('genre-bd').innerHTML=h;
   const gbdNote=document.getElementById('genre-bd-note');if(gbdNote)gbdNote.textContent=expView==='private'?'💼 仕事分を除く':'仕事分込み';
-  renderPayBreakdown(rr.filter(r=>r.type==='out'),'pay-bd-m');
+  renderPayBreakdown(rr.filter(r=>r.type==='out'),'pay-bd-m',[...getFixedList(anaY,anaM),...getMfList(anaY,anaM)]);
   renderSavingsCard();
 }
 function editCapLimit(g,v){const sel=document.getElementById('cap-genre-sel');if(sel)sel.value=g;const inp=document.getElementById('cap-inp');if(inp)inp.value=v;checkCapBtn();}
@@ -1833,12 +1824,13 @@ function renderA(){
   const maxO=Math.max(...md.map(d=>d.mO),1);let th='';
   md.forEach(({m,mO,mMf,key})=>{const budget=budgets[key]||0;const varSp=mO-mMf;th+=`<div class="mtr"><div class="mtr-m">${m+1}月</div><div class="mtr-bw"><div class="mtr-bt"><div class="mtr-bf" style="width:${Math.round(mO/maxO*100)}%"></div></div></div><div class="mtr-a">¥${mO.toLocaleString()}</div><div class="mtr-b">${mMf>0?'固定¥'+mMf.toLocaleString():'変動¥'+varSp.toLocaleString()}</div></div>`;});
   document.getElementById('ann-table').innerHTML=th;
-  renderPayBreakdown(records.filter(r=>r.date.startsWith(annY+'')&&r.type==='out'),'pay-bd-a');
+  const annFixedItems=[];for(let mm=0;mm<12;mm++){annFixedItems.push(...getFixedList(annY,mm),...getMfList(annY,mm));}
+  renderPayBreakdown(records.filter(r=>r.date.startsWith(annY+'')&&r.type==='out'),'pay-bd-a',annFixedItems);
 }
 function toggleSubDetail(id,row){const el=document.getElementById(id);if(!el)return;const isOpen=el.style.display==='none';el.style.display=isOpen?'block':'none';const chev=row.querySelector('span:last-child');if(chev)chev.style.transform=isOpen?'rotate(90deg)':'';}
 function handleGenreClick(rowEl){const id=rowEl.getAttribute('data-detail-id');if(!id)return;const el=document.getElementById(id);if(!el)return;const isOpen=el.classList.toggle('show');const chev=rowEl.querySelector('.gchevron');if(chev)chev.classList.toggle('open',isOpen);}
 const PAY_COLORS=['#007aff','#34c759','#ff9500','#af52de','#ff3b30','#00c7be','#ff6b35','#5856d6'];
-function renderPayBreakdown(outRecs,elId){const el=document.getElementById(elId);if(!el)return;if(outRecs.length===0){el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">支出データがありません</div>';return;}const pm={};outRecs.forEach(r=>{pm[r.payment]=(pm[r.payment]||0)+r.amount});const sorted=Object.entries(pm).sort((a,b)=>b[1]-a[1]);const total=sorted.reduce((s,[,v])=>s+v,0);const maxV=sorted[0]?.[1]||1;let h='';sorted.forEach(([pay,amt],i)=>{const col=PAY_COLORS[i%PAY_COLORS.length];const pct=Math.round(amt/total*100);h+=`<div class="grow"><div class="gdot" style="background:${col}"></div><div class="gname">${pay}</div><div class="gtrack"><div class="gfill" style="width:${amt/maxV*100}%;background:${col}"></div></div><div style="text-align:right;min-width:90px"><div class="gamt" style="color:${col}">¥${amt.toLocaleString()}</div><div style="font-size:10px;color:var(--muted)">${pct}%</div></div></div>`;});el.innerHTML=h;}
+function renderPayBreakdown(outRecs,elId,fixedItems){const el=document.getElementById(elId);if(!el)return;const items=fixedItems||[];if(outRecs.length===0&&(expFixedView!=='all'||items.length===0)){el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">支出データがありません</div>';applyFixedViewToggle();return;}const pm={};outRecs.forEach(r=>{pm[r.payment]=(pm[r.payment]||0)+r.amount});if(expFixedView==='all'){items.forEach(f=>{pm[f.payment]=(pm[f.payment]||0)+f.amount});}applyFixedViewToggle();const sorted=Object.entries(pm).sort((a,b)=>b[1]-a[1]);const total=sorted.reduce((s,[,v])=>s+v,0);const maxV=sorted[0]?.[1]||1;let h='';sorted.forEach(([pay,amt],i)=>{const col=PAY_COLORS[i%PAY_COLORS.length];const pct=Math.round(amt/total*100);h+=`<div class="grow"><div class="gdot" style="background:${col}"></div><div class="gname">${pay}</div><div class="gtrack"><div class="gfill" style="width:${amt/maxV*100}%;background:${col}"></div></div><div style="text-align:right;min-width:90px"><div class="gamt" style="color:${col}">¥${amt.toLocaleString()}</div><div style="font-size:10px;color:var(--muted)">${pct}%</div></div></div>`;});el.innerHTML=h;}
 function setFtab(t){ftab=t;['m','y','mf'].forEach(x=>{const el=document.getElementById('ftab-'+x);if(el)el.classList.toggle('active',x===t);});document.getElementById('fi-monthly-wrap').style.display=t==='m'?'block':'none';document.getElementById('fi-yearly-wrap').style.display=t==='y'?'block':'none';document.getElementById('fi-mf-wrap').style.display=t==='mf'?'block':'none';}
 function renderFixedLists(){renderFixedList('m');renderFixedList('y');renderMfDefList();}
 function renderFixedList(type){const id=type==='m'?'fi-monthly-list':'fi-yearly-list';const el=document.getElementById(id);const items=fixed.filter(f=>f.type===type);if(items.length===0){el.innerHTML=`<div class="fi-empty">${type==='m'?'月払い':'年払い'}の固定費が未登録です</div>`;return;}el.innerHTML=items.map(f=>{const period=(f.start||f.end)?` (${f.start||''}〜${f.end||''})` : '';
@@ -2257,7 +2249,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-3'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-4'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
