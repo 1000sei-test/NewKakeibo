@@ -530,7 +530,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
     </div>
-    <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>ジャンル別支出</span><span style="font-size:10px;font-weight:400;color:#4a70a8" id="genre-bd-note"></span></div><div id="genre-bd"></div></div>
+    <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>ジャンル別支出</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button><button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button></div></div><div id="genre-bd"></div></div>
     <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>💳 支払い方法別支出</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button><button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button></div></div><div id="pay-bd-m"></div></div>
   </div>
   <div id="ana-a" style="display:none">
@@ -2249,7 +2249,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-5'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-6'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
