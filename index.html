@@ -424,13 +424,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="scards">
       <div class="sc" style="grid-column:1/-1;background:#fff0f0;border:1px solid #f0b0a0">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div class="sl" style="color:var(--red)">支出合計</div>
-          <div style="display:flex;background:#f5dcd6;border-radius:8px;padding:2px">
-            <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
-            <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
-          </div>
-        </div>
+        <div class="sl" style="color:var(--red)">支出合計</div>
         <div class="sv" style="color:var(--red);font-size:26px" id="ana-out">¥0</div>
         <div style="font-size:11px;color:#4a70a8;margin-top:-6px;display:none" id="ana-out-note">💼 仕事分（手当て）を除いた金額です</div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid #f0b0a0;display:flex;flex-wrap:wrap;gap:10px">
@@ -530,7 +524,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
     </div>
-    <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>ジャンル別支出</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button><button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button></div></div><div id="genre-bd"></div></div>
+    <div class="gcard"><div class="gcard-t">ジャンル別支出</div><div id="genre-bd"></div></div>
     <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>💳 支払い方法別支出</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button><button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button></div></div><div id="pay-bd-m"></div></div>
   </div>
   <div id="ana-a" style="display:none">
@@ -540,13 +534,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <button class="anav-btn" id="ann-next">▶</button>
     </div>
     <div class="ahero">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-        <div class="ahl">年間支出合計（変動＋月額固定費）</div>
-        <div style="display:flex;background:#e8e2d8;border-radius:8px;padding:2px">
-          <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
-          <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
-        </div>
-      </div>
+      <div class="ahl">年間支出合計（変動＋月額固定費）</div>
       <div class="ahv" id="ann-out">¥0</div>
       <div class="ahl" id="ann-in">収入: ¥0</div>
     </div>
@@ -611,10 +599,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div style="background:#f5f1ea;border-radius:18px;padding:16px;margin-bottom:14px;border:1px solid #e8e2d8">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:12px;color:#a89880">📊 今月のまとめ</div>
-        <div style="display:flex;background:#e8e2d8;border-radius:8px;padding:2px">
-          <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
-          <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
-        </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div style="background:#fff;border-radius:12px;padding:12px"><div style="font-size:11px;color:#a89880">月収（額面）</div><div style="font-size:18px;font-weight:700;color:#2c2820;margin-top:2px" id="sal-gross-sum">¥0</div><div style="font-size:10px;color:#a89880;margin-top:3px;display:none" id="sal-gross-exbonus-row">賞与抜き <span id="sal-gross-exbonus">¥0</span></div></div>
@@ -637,12 +621,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div style="background:#f5f1ea;border:1px solid #e8e2d8;border-radius:18px;padding:16px 18px;margin-bottom:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:13px;font-weight:700;color:#2c2820">年間の内訳</div>
-        <div style="display:flex;background:#e8e2d8;border-radius:8px;padding:2px">
-          <button class="ev-btn" data-mode="all" onclick="setExpView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--red)">全部</button>
-          <button class="ev-btn" data-mode="private" onclick="setExpView('private')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:#5a8a5a">仕事分を除く</button>
-        </div>
       </div>
-      <div style="font-size:10px;color:#a89880;margin-bottom:10px" id="sal-ann-view-note"></div>
       <div style="display:flex;align-items:center;gap:10px;padding:2px 0 10px"><div style="width:22px"></div><div style="flex:1;min-width:0"><div style="font-size:13px;color:#7a6a55;font-weight:700">年収（額面）</div><div style="font-size:10px;color:#007aff;margin-top:2px" id="sal-ann-bonus-gross-wrap">うち賞与 額面<span id="sal-ann-bonus-gross">¥0</span></div></div><div style="font-size:24px;font-weight:700;color:#2c2820" id="sal-ann-gross-total">¥0</div></div>
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #e8e2d8;"><div style="width:22px;height:22px;border-radius:50%;background:#e8e2d8;color:#7a6a55;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">−</div><div style="flex:1;min-width:0"><div style="font-size:12px;color:#7a6a55;font-weight:400">控除合計</div></div><div style="font-size:15px;font-weight:700;color:#c0604a" id="sal-ann-deduct">¥0</div></div>
       <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #e8e2d8;"><div style="width:22px;height:22px;border-radius:50%;background:#e8e2d8;color:#7a6a55;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">=</div><div style="flex:1;min-width:0"><div style="font-size:13px;color:#7a6a55;font-weight:700">給与手取り</div><div style="font-size:10px;color:#007aff;margin-top:2px" id="sal-ann-bonus-net-wrap">うち賞与 手取り<span id="sal-ann-bonus">¥0</span></div></div><div style="font-size:19px;font-weight:700;color:#5b7e6e" id="sal-ann-net-total">¥0</div></div>
@@ -946,7 +925,7 @@ let invY,invM;
 let discountTypes=safeLS('kk_discount_types',JSON.stringify([{id:'dt1',name:'ポイント'},{id:'dt2',name:'クーポン'},{id:'dt3',name:'支給'},{id:'dt4',name:'割り勘'},{id:'dt5',name:'その他'}]));
 let allowanceTypes=safeLS('kk_allowance_types',JSON.stringify([{id:'at1',name:'出張交通費'},{id:'at2',name:'出張昼食代'},{id:'at3',name:'業務立替'},{id:'at4',name:'その他手当て'}]));
 let incomeCats=safeLS('kk_income_cats',JSON.stringify(['メルカリ','副業','フリーランス','せどり','投資','その他']));
-let expView=safeLS('kk_exp_view','"private"');
+const expView='all';
 let expFixedView=safeLS('kk_fix_view','"var"');
 let calY,calM,anaY,anaM,annY,bmY,bmM;
 let bmSel=new Set(),selDay=null,anaSeg='m',ftab='m';
@@ -962,14 +941,14 @@ function fmtDate(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.get
 function sv(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}
   if(k==='kk_records'||k==='kk_incomes'||k==='kk_salaries'){try{updateBackupBar();}catch(e){}}}
 function uid(){return Date.now()+'_'+Math.random().toString(36).slice(2,7)}
-function setExpView(mode){if(expView===mode)return;expView=mode;sv('kk_exp_view',expView);renderM();renderA();try{renderCal();}catch(e){}try{calcSalary();}catch(e){}try{renderSalAnnual();}catch(e){}}
+function setExpView(){}
 function setFixedView(mode){if(expFixedView===mode)return;expFixedView=mode;sv('kk_fix_view',expFixedView);renderM();renderA();}
 function applyFixedViewToggle(){document.querySelectorAll('.fv-btn').forEach(b=>{const on=b.dataset.mode===expFixedView;b.style.background=on?'#fff':'none';b.style.boxShadow=on?'0 1px 2px rgba(0,0,0,.15)':'none';});}
-function expAmt(r){return expView==='private'?Math.max((r.amount||0)-(r.allowance||0),0):(r.amount||0);}
+function expAmt(r){return r.amount||0;}
 function excessAmt(r){return Math.max((r.allowance||0)-(r.amount||0),0);}
 function offsetAmt(r){return Math.min(r.allowance||0,r.amount||0);}
 function groupAmt(arr){return arr.reduce((s,r)=>s+expAmt(r),0);}
-function applyExpViewToggle(){document.querySelectorAll('.ev-btn').forEach(b=>{const on=b.dataset.mode===expView;b.style.background=on?'#fff':'none';b.style.boxShadow=on?'0 1px 2px rgba(0,0,0,.15)':'none';});}
+function applyExpViewToggle(){}
 function toggleMemoRow(mid){const el=document.getElementById(mid);if(el)el.style.display=el.style.display==='block'?'none':'block';}
 function memoDetailRow(r){
   const specialTag=r.special?'<span class="special-badge">特別</span>':'';
@@ -1095,7 +1074,6 @@ function setupSwipeNav(){
 }
 function showPage(p){
   if(document.activeElement)document.activeElement.blur();
-  if(expView!=='private'){expView='private';sv('kk_exp_view',expView);}
   document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
@@ -1150,14 +1128,10 @@ function renderCal(){
   document.getElementById('hdr-month-txt').textContent=calY+'年 '+(calM+1)+'月';
   const mRecs=records.filter(r=>r.date.startsWith(key));
   const mOutRecs=mRecs.filter(r=>r.type==='out');
-  const varExp=mOutRecs.reduce((s,r)=>s+Math.max((r.amount||0)-(r.allowance||0),0),0);
-  const workOffset=mOutRecs.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);
+  const varExp=mOutRecs.reduce((s,r)=>s+(r.amount||0),0);
   document.getElementById('hdr-exp').textContent=varExp.toLocaleString();
   const hdrWorkWrap=document.getElementById('hdr-work-wrap');
-  if(hdrWorkWrap){
-    hdrWorkWrap.style.display=workOffset>0?'inline':'none';
-    hdrWorkWrap.textContent=workOffset>0?` （💼仕事 ¥${workOffset.toLocaleString()}除く）`:'';
-  }
+  if(hdrWorkWrap)hdrWorkWrap.style.display='none';
 
   const mfTotal=getMfTotal(calY,calM);
   const first=new Date(calY,calM,1).getDay(),last=new Date(calY,calM+1,0).getDate();
@@ -1171,7 +1145,7 @@ function renderCal(){
     const dO=rr.filter(r=>r.type==='out').reduce((s,r)=>s+r.amount,0);
     const dI=rr.filter(r=>r.type==='in').reduce((s,r)=>s+r.amount,0);
     const dBudgetRecs=rr.filter(r=>r.type==='out'&&!r.special&&!calCapData[r.genre]);
-    const dBudgetSpend=dBudgetRecs.reduce((s,r)=>s+Math.max((r.amount||0)-(r.allowance||0),0),0);
+    const dBudgetSpend=dBudgetRecs.reduce((s,r)=>s+(r.amount||0),0);
     const wasOver=calBudget>0&&runningSpend>calBudget;
     runningSpend+=dBudgetSpend;
     const isOver=calBudget>0&&runningSpend>calBudget;
@@ -1689,11 +1663,11 @@ function renderM(){
   if(capListEl){const caps=Object.entries(capData).filter(([,v])=>v>0);capListEl.innerHTML=caps.length>0?caps.map(([g,v])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#fff8f0;border-radius:8px;margin-bottom:4px;font-size:13px"><span style="flex:1;color:#ff9500;font-weight:600">${g}</span><span style="font-weight:700">¥${v.toLocaleString()}</span><button onclick="editCapLimit('${g}',${v})" style="border:1.5px solid var(--accent);background:none;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;padding:3px 8px;border-radius:6px;font-family:inherit">編集</button><button onclick="delCapLimit('${g}')" style="border:1.5px solid var(--red);background:none;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;padding:3px 6px;border-radius:6px">✕</button></div>`).join(''):'<div style="font-size:11px;color:var(--muted)">設定なし</div>';}
   const capBtn=document.getElementById('cap-save-btn');if(capBtn){capBtn.disabled=true;capBtn.style.background='#c7c7cc';capBtn.style.cursor='default';}
   const capInp=document.getElementById('cap-inp');if(capInp)capInp.value='';
-  // 変動費のみで予算計算（月額固定費は除外、手当てでカバーされる分も予算からは除外）
-  const varSpend=rr.filter(r=>r.type==='out'&&!r.special&&!capData[r.genre]).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);
+  // 変動費のみで予算計算（月額固定費は除外。手当ては支出額から差し引かず給与側に加算する）
+  const varSpend=rr.filter(r=>r.type==='out'&&!r.special&&!capData[r.genre]).reduce((s,r)=>s+r.amount,0);
   let capExcludeTotal=0;
-  Object.keys(capData).forEach(g=>{const cap=capData[g];if(!cap)return;const gTotal=rr.filter(r=>r.type==='out'&&r.genre===g&&!r.special).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);capExcludeTotal+=Math.min(gTotal,cap);});
-  const capGenreSpend=rr.filter(r=>r.type==='out'&&capData[r.genre]&&!r.special).reduce((s,r)=>s+Math.max(r.amount-(r.allowance||0),0),0);
+  Object.keys(capData).forEach(g=>{const cap=capData[g];if(!cap)return;const gTotal=rr.filter(r=>r.type==='out'&&r.genre===g&&!r.special).reduce((s,r)=>s+r.amount,0);capExcludeTotal+=Math.min(gTotal,cap);});
+  const capGenreSpend=rr.filter(r=>r.type==='out'&&capData[r.genre]&&!r.special).reduce((s,r)=>s+r.amount,0);
   const capOverSpend=Math.max(capGenreSpend-capExcludeTotal,0);
   const totalVarSpend=varSpend+capOverSpend;
   const specialTotal=rr.filter(r=>r.type==='out'&&r.special).reduce((s,r)=>s+r.amount,0);
@@ -2249,7 +2223,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-6'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-9'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
