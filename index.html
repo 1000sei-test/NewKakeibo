@@ -432,7 +432,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-special-col"><div style="font-size:10px;color:var(--orange)">⚡ 特別支出</div><div style="font-size:14px;font-weight:700;color:var(--orange)" id="ana-special">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-mf-col"><div style="font-size:10px;color:var(--purple)">🔒 固定費</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-mf">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-out-inv-col"><div style="font-size:10px;color:#3a6ea5">📈 投資</div><div style="font-size:14px;font-weight:700;color:#2a5a8a" id="ana-out-inv">¥0</div></div>
-          <div style="display:flex;flex-direction:column;gap:2px" id="ana-work-col"><div style="font-size:10px;color:#4a70a8">💼 仕事（手当て）</div><div style="font-size:14px;font-weight:700;color:#4a70a8" id="ana-work">¥0</div></div>
         </div>
       </div>
       <div class="sc" style="grid-column:1/-1;background:#fff5f4;border:1px solid #f0c8c0">
@@ -2223,7 +2222,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-9'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-10'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
