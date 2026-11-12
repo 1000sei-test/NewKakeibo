@@ -415,6 +415,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div class="aseg">
     <button class="aseg-btn active" id="seg-m" onclick="setAnaSeg('m')">月別</button>
     <button class="aseg-btn" id="seg-a" onclick="setAnaSeg('a')">年間</button>
+    <button class="aseg-btn" id="seg-i" onclick="setAnaSeg('i')">📈 投資</button>
   </div>
   <div id="ana-m">
     <div class="anav">
@@ -467,7 +468,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
       <div class="sc" style="grid-column:1/-1;background:#eef4fb;border:1px solid #b8cfe8">
-        <div class="sl" style="color:#3a6ea5;font-size:13px;font-weight:700">📈 投資額（支出・収入には含まれません）</div>
+        <div class="sl" style="color:#3a6ea5;font-size:13px;font-weight:700">📈 投資額（支出に含まれます）</div>
         <div class="sv" style="color:#2a5a8a;font-size:26px" id="ana-inv-month">¥0</div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid #b8cfe8;display:flex;flex-wrap:wrap;gap:10px">
           <div style="display:flex;flex-direction:column;gap:2px"><div style="font-size:10px;color:#3a6ea5">今月</div><div style="font-size:14px;font-weight:700;color:#2a5a8a" id="ana-inv-month-sub">¥0</div></div>
@@ -557,9 +558,29 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     <div class="mtcard"><div class="mtcard-t">月別一覧</div><div id="ann-table"></div></div>
     <div class="gcard"><div class="gcard-t" style="display:flex;align-items:center;justify-content:space-between"><span>💳 支払い方法別支出（年間）</span><div style="display:flex;background:#eee6da;border-radius:8px;padding:2px"><button class="fv-btn" data-mode="var" onclick="setFixedView('var')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--muted)">変動費のみ</button><button class="fv-btn" data-mode="all" onclick="setFixedView('all')" style="border:none;font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--purple)">全部</button></div></div><div id="pay-bd-a"></div></div>
   </div>
+  <div id="inc-invest" style="display:none">
+    <div style="background:#eef4fb;border:1px solid #b8cfe8;border-radius:18px;padding:18px;margin-bottom:14px">
+      <div style="font-size:12px;color:#3a6ea5">📈 累計投資額（全期間）</div>
+      <div style="font-size:30px;font-weight:700;color:#2a5a8a;margin:4px 0" id="inv-cumulative">¥0</div>
+      <div style="font-size:12px;color:#3a6ea5" id="inv-cumulative-count">0件</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <button class="anav-btn" id="inv-prev">◀</button>
+      <div style="text-align:center"><div style="font-size:17px;font-weight:700" id="inv-month-title"></div><div style="font-size:12px;color:var(--muted);margin-top:1px" id="inv-month-total"></div></div>
+      <button class="anav-btn" id="inv-next">▶</button>
+    </div>
+    <div class="icard">
+      <div class="icard-t">📈 投資額を記録</div>
+      <div class="irow"><div class="ilbl">日付</div><input class="ictrl" type="date" id="inv-date"></div>
+      <div class="irow"><div class="ilbl">タイトル</div><input class="ictrl" type="text" id="inv-title" placeholder="例: つみたてNISA" oninput="checkInvBtn()"></div>
+      <div class="irow"><div class="ilbl">金額</div><input class="ictrl" type="number" inputmode="numeric" pattern="[0-9]*" id="inv-amt" placeholder="0" min="0" oninput="checkInvBtn()"><button onclick="openCalc('inv-amt',checkInvBtn)" style="border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:15px;cursor:pointer;padding:5px 8px;color:#a89880;flex-shrink:0">🧮</button></div>
+      <div class="irow"><div class="ilbl">メモ</div><input class="ictrl" type="text" id="inv-memo" placeholder="任意"></div>
+    </div>
+    <button class="save-btn" id="inv-save-btn" onclick="saveInvestment()" disabled style="background:#c7c7cc;cursor:default;margin-bottom:16px">保存する</button>
+    <div class="icard"><div class="icard-t">今月の投資一覧</div><div id="inv-list" style="padding:0 14px"></div></div>
+  </div>
 </div>
 </div>
-
 <div class="page" id="page-salary">
 <div class="ip">
   <div class="aseg">
@@ -642,7 +663,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   <div class="aseg">
     <button class="aseg-btn active" id="inc-seg-m" onclick="setIncSeg('m')">月別</button>
     <button class="aseg-btn" id="inc-seg-a" onclick="setIncSeg('a')">年間</button>
-    <button class="aseg-btn" id="inc-seg-i" onclick="setIncSeg('i')">📈 投資</button>
   </div>
   <div id="inc-monthly">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -675,27 +695,6 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="icard"><div class="icard-t">カテゴリ別合計</div><div id="inc-ann-cat" style="padding:0 14px"></div></div>
     <div class="icard"><div class="icard-t">月別一覧</div><div id="inc-ann-months"></div></div>
-  </div>
-  <div id="inc-invest" style="display:none">
-    <div style="background:#eef4fb;border:1px solid #b8cfe8;border-radius:18px;padding:18px;margin-bottom:14px">
-      <div style="font-size:12px;color:#3a6ea5">📈 累計投資額（全期間）</div>
-      <div style="font-size:30px;font-weight:700;color:#2a5a8a;margin:4px 0" id="inv-cumulative">¥0</div>
-      <div style="font-size:12px;color:#3a6ea5" id="inv-cumulative-count">0件</div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <button class="anav-btn" id="inv-prev">◀</button>
-      <div style="text-align:center"><div style="font-size:17px;font-weight:700" id="inv-month-title"></div><div style="font-size:12px;color:var(--muted);margin-top:1px" id="inv-month-total"></div></div>
-      <button class="anav-btn" id="inv-next">▶</button>
-    </div>
-    <div class="icard">
-      <div class="icard-t">📈 投資額を記録</div>
-      <div class="irow"><div class="ilbl">日付</div><input class="ictrl" type="date" id="inv-date"></div>
-      <div class="irow"><div class="ilbl">タイトル</div><input class="ictrl" type="text" id="inv-title" placeholder="例: つみたてNISA" oninput="checkInvBtn()"></div>
-      <div class="irow"><div class="ilbl">金額</div><input class="ictrl" type="number" inputmode="numeric" pattern="[0-9]*" id="inv-amt" placeholder="0" min="0" oninput="checkInvBtn()"><button onclick="openCalc('inv-amt',checkInvBtn)" style="border:1px solid var(--border);background:var(--bg);border-radius:8px;font-size:15px;cursor:pointer;padding:5px 8px;color:#a89880;flex-shrink:0">🧮</button></div>
-      <div class="irow"><div class="ilbl">メモ</div><input class="ictrl" type="text" id="inv-memo" placeholder="任意"></div>
-    </div>
-    <button class="save-btn" id="inv-save-btn" onclick="saveInvestment()" disabled style="background:#c7c7cc;cursor:default;margin-bottom:16px">保存する</button>
-    <div class="icard"><div class="icard-t">今月の投資一覧</div><div id="inv-list" style="padding:0 14px"></div></div>
   </div>
 </div>
 </div>
@@ -1042,12 +1041,11 @@ function init(){
 
 function getActiveNavIds(){
   if(document.getElementById('page-cal')?.classList.contains('active'))return{prev:'hdr-prev',next:'hdr-next'};
-  if(document.getElementById('page-ana')?.classList.contains('active'))return anaSeg==='m'?{prev:'ana-prev',next:'ana-next'}:{prev:'ann-prev',next:'ann-next'};
+  if(document.getElementById('page-ana')?.classList.contains('active'))return anaSeg==='m'?{prev:'ana-prev',next:'ana-next'}:anaSeg==='a'?{prev:'ann-prev',next:'ann-next'}:{prev:'inv-prev',next:'inv-next'};
   if(document.getElementById('page-salary')?.classList.contains('active'))return salSeg==='m'?{prev:'sal-prev',next:'sal-next'}:{prev:'sal-ann-prev',next:'sal-ann-next'};
   if(document.getElementById('page-income')?.classList.contains('active')){
     if(incSeg==='m')return{prev:'inc-prev',next:'inc-next'};
     if(incSeg==='a')return{prev:'inc-ann-prev',next:'inc-ann-next'};
-    if(incSeg==='i')return{prev:'inv-prev',next:'inv-next'};
   }
   return null;
 }
@@ -1081,9 +1079,9 @@ function showPage(p){
   document.querySelector('.scroll').scrollTop=0;
   try{
     if(p==='cal'){calY=today.getFullYear();calM=today.getMonth();renderCal();}
-    if(p==='ana'){anaY=today.getFullYear();anaM=today.getMonth();annY=today.getFullYear();renderAna();}
+    if(p==='ana'){anaY=today.getFullYear();anaM=today.getMonth();annY=today.getFullYear();invY=today.getFullYear();invM=today.getMonth();renderAna();}
     if(p==='salary'){salY=today.getFullYear();salM=today.getMonth();salAnnY=today.getFullYear();renderSalaryPage();}
-    if(p==='income'){incY=today.getFullYear();incM=today.getMonth();incAnnY=today.getFullYear();invY=today.getFullYear();invM=today.getMonth();renderIncomeCatSelect();renderIncomePage();if(incSeg==='i')renderInvPage();}
+    if(p==='income'){incY=today.getFullYear();incM=today.getMonth();incAnnY=today.getFullYear();renderIncomeCatSelect();renderIncomePage();}
     if(p==='settings'){renderFixedLists();renderPayList();renderGenreList();renderDiscountTypeList();renderAllowanceTypeList();renderDiscountSelects();renderAllowanceSelects();renderSiLists();renderBulkCatList();renderBulkCatBtns();renderBmCal();applyMaster();renderMfDefList();renderIncomeCatList();renderBackupPanel();}
   }catch(e){console.error(e);}
 }
@@ -1349,8 +1347,8 @@ function saveRecord(){
   if(act&&act.id==='page-salary')renderSalaryPage();
   updateBackupBar();
 }
-function setAnaSeg(s){anaSeg=s;document.getElementById('seg-m').classList.toggle('active',s==='m');document.getElementById('seg-a').classList.toggle('active',s==='a');document.getElementById('ana-m').style.display=s==='m'?'block':'none';document.getElementById('ana-a').style.display=s==='a'?'block':'none';renderAna();}
-function renderAna(){if(anaSeg==='m')renderM();else renderA();}
+function setAnaSeg(s){anaSeg=s;document.getElementById('seg-m').classList.toggle('active',s==='m');document.getElementById('seg-a').classList.toggle('active',s==='a');document.getElementById('ana-m').style.display=s==='m'?'block':'none';document.getElementById('ana-a').style.display=s==='a'?'block':'none';document.getElementById('inc-invest').style.display=s==='i'?'block':'none';document.getElementById('seg-i').classList.toggle('active',s==='i');renderAna();}
+function renderAna(){if(anaSeg==='m')renderM();else if(anaSeg==='a')renderA();else renderInvPage();}
 function monthExpenseTotal(y,m){
   const key=ym(y,m);
   const rr=records.filter(r=>r.date.startsWith(key));
@@ -1771,7 +1769,7 @@ function saveBudget(){const key=ym(anaY,anaM),val=parseInt(document.getElementBy
 function renderA(){
   document.getElementById('ann-title').textContent=annY+'年';
   let tO=0,tI=0,tMf=0,tVar=0,tAllow=0,tOffset=0;const md=[];let mv=0;
-  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const outRecsY=rr.filter(r=>r.type==='out');const mO=outRecsY.reduce((s,r)=>s+r.amount,0);const mAllow=outRecsY.reduce((s,r)=>s+(r.allowance||0),0);const mOffset=outRecsY.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);const mExcess=outRecsY.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);const salDataY=salaries[key]||{};const salNetBaseY=salDataY.net||0;const salAddBackY=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salDataY.items?.[s.id]||0),0);const salAllowY=allowanceTypes.reduce((s,a)=>s+(salDataY.allowances?.[a.id]||0),0);const salNetShownY=salNetBaseY+salAddBackY+salAllowY+(expView==='all'?mAllow:mExcess);const mSideIncome=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);const mI=salNetShownY+mSideIncome;const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;tO+=mO+mAllFix;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;tOffset+=mOffset;mv=Math.max(mv,mO+mAllFix,mI);md.push({m,mO:mO+mAllFix,mI,key,mMf:mAllFix});}
+  for(let m=0;m<12;m++){const key=ym(annY,m),rr=records.filter(r=>r.date.startsWith(key));const outRecsY=rr.filter(r=>r.type==='out');const mO=outRecsY.reduce((s,r)=>s+r.amount,0);const mAllow=outRecsY.reduce((s,r)=>s+(r.allowance||0),0);const mOffset=outRecsY.reduce((s,r)=>s+Math.min(r.allowance||0,r.amount||0),0);const mExcess=outRecsY.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);const salDataY=salaries[key]||{};const salNetBaseY=salDataY.net||0;const salAddBackY=salItems.filter(s=>s.type==='ded'&&s.addToNet).reduce((sum,s)=>sum+(salDataY.items?.[s.id]||0),0);const salAllowY=allowanceTypes.reduce((s,a)=>s+(salDataY.allowances?.[a.id]||0),0);const salNetShownY=salNetBaseY+salAddBackY+salAllowY+(expView==='all'?mAllow:mExcess);const mSideIncome=incomes.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);const mI=salNetShownY+mSideIncome;const mMf=getMfTotal(annY,m);const mFx=getFixedTotal(annY,m);const mAllFix=mMf+mFx;const mInv=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);tO+=mO+mAllFix+mInv;tI+=mI;tMf+=mAllFix;tVar+=mO;tAllow+=mAllow;tOffset+=mOffset;mv=Math.max(mv,mO+mAllFix+mInv,mI);md.push({m,mO:mO+mAllFix+mInv,mI,key,mMf:mAllFix});}
   document.getElementById('ann-out').textContent='¥'+(expView==='private'?(tO-tOffset):tO).toLocaleString();document.getElementById('ann-in').textContent='収入: ¥'+tI.toLocaleString();document.getElementById('ann-mf').textContent='¥'+tMf.toLocaleString();document.getElementById('ann-var').textContent='¥'+tVar.toLocaleString();
   applyExpViewToggle();
   document.getElementById('ann-work').textContent='¥'+tOffset.toLocaleString();document.getElementById('ann-private').textContent='¥'+(tO-tOffset).toLocaleString();
@@ -1894,7 +1892,7 @@ function calcSalary(){const v=id=>{const el=document.getElementById(id);return e
   set('sal-real-net-detail',detailParts.join(' ＋ '));const noteEl=document.getElementById('sal-real-net-note');if(noteEl){const parts=[];if(addBack>0)parts.push('控除加算 ¥'+addBack.toLocaleString());if(monthAllowanceShown>0)parts.push('手当て ¥'+monthAllowanceShown.toLocaleString());noteEl.textContent=parts.length>0?'手取り ¥'+net.toLocaleString()+' ＋ '+parts.join(' ＋ '):'手当てを入力すると実質手取りに加算されます';}return net;}
 function saveSalary(){const v=id=>{const el=document.getElementById(id);return el?parseInt(el.value)||0:0;};const key=ym(salY,salM);const items={};salItems.forEach(s=>{items[s.id]=v('sif_'+s.id);});const allowances={};allowanceTypes.forEach(a=>{allowances[a.id]=v('sat_'+a.id);});const gross=salItems.filter(s=>s.type==='inc').reduce((sum,s)=>sum+v('sif_'+s.id),0);const deduct=salItems.filter(s=>s.type==='ded').reduce((sum,s)=>sum+v('sif_'+s.id),0);salaries[key]={gross,net:gross-deduct,items,allowances};sv('kk_salaries',salaries);toast('給与情報を保存しました ✓');}
 function renderSalAnnual(){document.getElementById('sal-ann-title').textContent=salAnnY+'年';let totalGross=0,totalNet=0,totalDeduct=0,totalBonusGross=0,totalBonusNet=0,totalAllowance=0;let rows='';for(let m=0;m<12;m++){const key=ym(salAnnY,m);const d=salaries[key];const monthOutRecsY=records.filter(r=>r.date.startsWith(key)&&r.type==='out');const monthAllowance=monthOutRecsY.reduce((s,r)=>s+(r.allowance||0),0);const monthExcess=monthOutRecsY.reduce((s,r)=>s+Math.max((r.allowance||0)-(r.amount||0),0),0);const monthAllowanceShown=expView==='all'?monthAllowance:monthExcess;const salMonthAllowance=d?allowanceTypes.reduce((sum,a)=>sum+(d.allowances?.[a.id]||0),0):0;totalAllowance+=monthAllowanceShown+salMonthAllowance;if(!d)continue;const deduct=salItems.filter(s=>s.type==='ded').reduce((sum,s)=>sum+(d.items?.[s.id]||0),0);const bonusGrossAmt=d.items?.['si_bonus']||0;const bonusDeductAmt=salItems.filter(s=>s.type==='ded'&&s.isBonus).reduce((sum,s)=>sum+(d.items?.[s.id]||0),0);const bonusNetAmt=bonusGrossAmt-bonusDeductAmt;totalGross+=d.gross||0;totalNet+=d.net||0;totalDeduct+=deduct;totalBonusGross+=bonusGrossAmt;totalBonusNet+=bonusNetAmt;rows+=`<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #e8e2d8;font-size:13px"><div style="width:80px;font-weight:600">${m+1}月</div><div style="flex:1"><div style="display:flex;gap:10px;flex-wrap:wrap"><span style="color:#5b7e6e;font-weight:600">手取 ¥${(d.net||0).toLocaleString()}</span><span style="color:#a89880">額面 ¥${(d.gross||0).toLocaleString()}</span>${monthAllowance>0?`<span style="color:#4a70a8;font-weight:600">💼 ¥${monthAllowance.toLocaleString()}</span>`:''}${bonusGrossAmt>0?`<span style="color:#007aff;font-weight:600">🎁 手取¥${bonusNetAmt.toLocaleString()}</span>`:''}</div><div style="font-size:11px;color:#a89880;margin-top:2px">控除 ¥${deduct.toLocaleString()}</div></div></div>`;}const annIncTotal=incomes.filter(r=>r.date.startsWith(String(salAnnY))).reduce((s,r)=>s+r.amount,0);const annRealNet=totalNet+totalAllowance;const grandTotal=annRealNet+annIncTotal;const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};set('sal-ann-net-total','¥'+totalNet.toLocaleString());set('sal-ann-real-net','¥'+annRealNet.toLocaleString());set('sal-ann-gross-total','¥'+totalGross.toLocaleString());set('sal-ann-deduct','¥'+totalDeduct.toLocaleString());set('sal-ann-deduct-disp','¥'+totalDeduct.toLocaleString());set('sal-ann-bonus','¥'+totalBonusNet.toLocaleString());set('sal-ann-bonus-gross','¥'+totalBonusGross.toLocaleString());const bgw=document.getElementById('sal-ann-bonus-gross-wrap');if(bgw)bgw.style.display=totalBonusGross>0?'':'none';const bnw=document.getElementById('sal-ann-bonus-net-wrap');if(bnw)bnw.style.display=totalBonusGross>0?'':'none';set('sal-ann-allowance','¥'+totalAllowance.toLocaleString());set('sal-ann-grand-total','¥'+grandTotal.toLocaleString());set('sal-ann-sub','¥'+annIncTotal.toLocaleString());const gdEl=document.getElementById('sal-ann-grand-detail');if(gdEl){const parts=[];if(totalNet>0)parts.push('給与手取 ¥'+totalNet.toLocaleString());if(annIncTotal>0)parts.push('副業等 ¥'+annIncTotal.toLocaleString());gdEl.textContent=parts.length>0?parts.join(' ＋ '):'データを入力してください';}document.getElementById('sal-ann-table').innerHTML=rows||'<div style="padding:16px;text-align:center;color:#8e8e93;font-size:13px">データがありません</div>';const annLblEl=document.getElementById('sal-ann-view-note');if(annLblEl)annLblEl.textContent=expView==='all'?'手当て込み':'💼 仕事分を除く';applyExpViewToggle();}
-function setIncSeg(s){incSeg=s;document.getElementById('inc-seg-m').classList.toggle('active',s==='m');document.getElementById('inc-seg-a').classList.toggle('active',s==='a');document.getElementById('inc-seg-i').classList.toggle('active',s==='i');document.getElementById('inc-monthly').style.display=s==='m'?'block':'none';document.getElementById('inc-annual').style.display=s==='a'?'block':'none';document.getElementById('inc-invest').style.display=s==='i'?'block':'none';if(s==='a')renderIncAnnual();if(s==='i')renderInvPage();}
+function setIncSeg(s){incSeg=s;document.getElementById('inc-seg-m').classList.toggle('active',s==='m');document.getElementById('inc-seg-a').classList.toggle('active',s==='a');document.getElementById('inc-monthly').style.display=s==='m'?'block':'none';document.getElementById('inc-annual').style.display=s==='a'?'block':'none';if(s==='a')renderIncAnnual();}
 function renderIncomePage(){const incDateEl=document.getElementById('inc-date');if(incDateEl)incDateEl.value=fmtDate(today);document.getElementById('inc-month-title').textContent=incY+'年 '+(incM+1)+'月';const key=ym(incY,incM);const monthInc=incomes.filter(r=>r.date.startsWith(key));const total=monthInc.reduce((s,r)=>s+r.amount,0);document.getElementById('inc-month-total').textContent=total>0?'合計 ¥'+total.toLocaleString():'記録なし';const list=document.getElementById('inc-list');if(monthInc.length===0){list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">この月の収入記録がありません</div>';return;}list.innerHTML=monthInc.sort((a,b)=>b.date>a.date?1:-1).map(r=>`<div class="ri" style="padding:9px 14px"><div class="ri-ic" style="background:#e8f5e9">💴</div><div class="ri-info"><div class="ri-name">${r.title}</div><div class="ri-sub">${r.date.slice(5)} ・ ${r.cat}${r.memo?' ・ '+r.memo:''}</div></div><div class="ri-amt in" style="margin-right:8px">+¥${r.amount.toLocaleString()}</div><button class="ri-edit" onclick="editIncome('${r.id}')">編集</button><button class="ri-del" onclick="delIncome('${r.id}')" style="flex-shrink:0">✕</button></div>`).join('');}
 function checkIncBtn(){const title=document.getElementById('inc-title').value.trim();const amt=parseInt(document.getElementById('inc-amt').value)||0;const ok=!!(title&&amt>0);const btn=document.getElementById('inc-save-btn');btn.disabled=!ok;btn.style.background=ok?'var(--accent)':'#c7c7cc';btn.style.cursor=ok?'pointer':'default';}
 let editingIncomeId=null;
@@ -2222,7 +2220,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-11'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-12'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
