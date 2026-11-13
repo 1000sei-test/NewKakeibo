@@ -577,6 +577,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
       <div class="irow"><div class="ilbl">メモ</div><input class="ictrl" type="text" id="inv-memo" placeholder="任意"></div>
     </div>
     <button class="save-btn" id="inv-save-btn" onclick="saveInvestment()" disabled style="background:#c7c7cc;cursor:default;margin-bottom:16px">保存する</button>
+    <button id="inv-cancel-btn" onclick="cancelInvEdit()" style="display:none;width:100%;border:none;background:#e5e5ea;color:#3a3a3c;font-weight:700;font-size:15px;padding:12px;border-radius:12px;margin:-6px 0 16px;cursor:pointer">編集をやめる</button>
     <div class="icard"><div class="icard-t">今月の投資一覧</div><div id="inv-list" style="padding:0 14px"></div></div>
   </div>
 </div>
@@ -1944,11 +1945,15 @@ function renderInvPage(){
   document.getElementById('inv-cumulative-count').textContent=investments.length+'件';
   const list=document.getElementById('inv-list');
   if(monthInv.length===0){list.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px">この月の投資記録がありません</div>';return;}
-  list.innerHTML=monthInv.sort((a,b)=>b.date>a.date?1:-1).map(r=>`<div class="ri" style="padding:9px 14px"><div class="ri-ic" style="background:#eef4fb">📈</div><div class="ri-info"><div class="ri-name">${r.title}</div><div class="ri-sub">${r.date.slice(5)}${r.memo?' ・ '+r.memo:''}</div></div><div class="ri-amt in" style="margin-right:8px;color:#2a5a8a">¥${r.amount.toLocaleString()}</div><button class="ri-del" onclick="delInvestment('${r.id}')" style="flex-shrink:0">✕</button></div>`).join('');
+  list.innerHTML=monthInv.sort((a,b)=>b.date>a.date?1:-1).map(r=>`<div class="ri" onclick="editInvestment('${r.id}')" style="padding:9px 14px;cursor:pointer"><div class="ri-ic" style="background:#eef4fb">📈</div><div class="ri-info"><div class="ri-name">${r.title}</div><div class="ri-sub">${r.date.slice(5)}${r.memo?' ・ '+r.memo:''}</div></div><div class="ri-amt in" style="margin-right:8px;color:#2a5a8a">¥${r.amount.toLocaleString()}</div><button class="ri-del" onclick="event.stopPropagation();delInvestment('${r.id}')" style="flex-shrink:0">✕</button></div>`).join('');
 }
 function checkInvBtn(){const amt=parseInt(document.getElementById('inv-amt').value)||0;const ok=amt>0;const btn=document.getElementById('inv-save-btn');btn.disabled=!ok;btn.style.background=ok?'#2a5a8a':'#c7c7cc';btn.style.cursor=ok?'pointer':'default';}
-function saveInvestment(){const date=document.getElementById('inv-date').value;const title=document.getElementById('inv-title').value.trim()||'投資';const amount=parseInt(document.getElementById('inv-amt').value)||0;const memo=document.getElementById('inv-memo').value.trim();if(!date||!amount){toast('日付・金額は必須です');return;}investments.push({id:uid(),date,title,amount,memo});sv('kk_investments',investments);document.getElementById('inv-title').value='';document.getElementById('inv-amt').value='';document.getElementById('inv-memo').value='';checkInvBtn();renderInvPage();toast('投資額を保存しました ✓');}
-function delInvestment(id){if(!confirm('削除しますか？'))return;investments=investments.filter(r=>r.id!==id);sv('kk_investments',investments);renderInvPage();toast('削除しました');}
+function saveInvestment(){const date=document.getElementById('inv-date').value;const title=document.getElementById('inv-title').value.trim()||'投資';const amount=parseInt(document.getElementById('inv-amt').value)||0;const memo=document.getElementById('inv-memo').value.trim();if(!date||!amount){toast('日付・金額は必須です');return;}const wasEdit=!!invEditId;if(wasEdit){const t=investments.find(r=>r.id===invEditId);if(t)Object.assign(t,{date,title,amount,memo});else investments.push({id:uid(),date,title,amount,memo});}else investments.push({id:uid(),date,title,amount,memo});sv('kk_investments',investments);resetInvForm();renderInvPage();toast(wasEdit?'投資額を更新しました ✓':'投資額を保存しました ✓');}
+let invEditId=null;
+function resetInvForm(){invEditId=null;['inv-title','inv-amt','inv-memo'].forEach(i=>document.getElementById(i).value='');document.getElementById('inv-date').value=fmtDate(today);document.getElementById('inv-save-btn').textContent='保存する';document.getElementById('inv-cancel-btn').style.display='none';checkInvBtn();}
+function editInvestment(id){const r=investments.find(x=>x.id===id);if(!r)return;invEditId=id;document.getElementById('inv-date').value=r.date;document.getElementById('inv-title').value=r.title;document.getElementById('inv-amt').value=r.amount;document.getElementById('inv-memo').value=r.memo||'';document.getElementById('inv-save-btn').textContent='更新する';document.getElementById('inv-cancel-btn').style.display='block';checkInvBtn();document.getElementById('inv-date').scrollIntoView({behavior:'smooth',block:'center'});}
+function cancelInvEdit(){resetInvForm();}
+function delInvestment(id){if(!confirm('削除しますか？'))return;investments=investments.filter(r=>r.id!==id);sv('kk_investments',investments);if(invEditId===id)resetInvForm();renderInvPage();toast('削除しました');}
 let calcTargetId=null,calcCallback=null,calcLeft=0,calcOper='',calcCurrent='0',calcJustEq=false,calcHasDecimal=false;
 function openCalc(targetId,callback){calcTargetId=targetId;calcCallback=callback||null;const cur=parseFloat(document.getElementById(targetId)?.value)||0;calcLeft=0;calcOper='';calcCurrent=cur>0?String(cur):'0';calcJustEq=false;calcHasDecimal=calcCurrent.includes('.');updateCalcDisplay();document.getElementById('calc-overlay').classList.add('show');}
 function closeCalc(){document.getElementById('calc-overlay').classList.remove('show');}
@@ -2220,7 +2225,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-12'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-13'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
