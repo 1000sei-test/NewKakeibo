@@ -303,6 +303,24 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   </div>
 </div>
 
+<div class="modal-overlay" id="adj-modal" onclick="if(event.target===this)closeAdjModal()">
+  <div class="modal-box" style="max-height:85vh;overflow-y:auto">
+    <div class="modal-title" id="adj-title">固定費をこの月だけ調整</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">この月だけ金額を変えられます(0＝払わない)。繰り上げ返済などの追加は下の「臨時」へ。</div>
+    <div id="adj-body"></div>
+    <div style="font-size:13px;font-weight:700;margin:14px 0 8px">臨時の支出（この月のみ・追加すると即保存）</div>
+    <div id="adj-extra-list"></div>
+    <div class="modal-row"><label>名前</label><input type="text" id="adj-x-name" placeholder="例: 繰り上げ返済"></div>
+    <div class="modal-row"><label>金額</label><input type="number" inputmode="numeric" pattern="[0-9]*" id="adj-x-amt" placeholder="0" min="0"></div>
+    <div class="modal-row"><label>支払い</label><select id="adj-x-pay"></select></div>
+    <button onclick="addFixedExtra()" style="width:100%;border:none;background:#e6d9f7;color:var(--purple);font-weight:700;font-size:14px;padding:10px;border-radius:10px;cursor:pointer">＋ 臨時を追加</button>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeAdjModal()">閉じる</button>
+      <button class="modal-save" onclick="saveFixedAdj()">金額の変更を保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 月額変動固定費 名前編集モーダル -->
 <div class="modal-overlay" id="mf-edit-modal" onclick="if(event.target===this)closeMfModalDirect()">
   <div class="modal-box">
@@ -449,12 +467,13 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid #b8dcc0;display:flex;flex-wrap:wrap;gap:10px" id="ana-discount-breakdown"></div>
       </div>
       <div class="sc" style="grid-column:1/-1;background:#f5f0ff;border:1px solid #d8c0f0">
-        <div class="sl" style="color:var(--purple)">🔒 固定費合計</div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><div class="sl" style="color:var(--purple)">🔒 固定費合計</div><button onclick="openAdjModal()" style="border:none;background:#e6d9f7;color:var(--purple);font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;cursor:pointer">✏️ この月を調整</button></div>
         <div class="sv" style="color:var(--purple)" id="ana-mf2">¥0</div>
         <div style="margin-top:10px;padding-top:8px;border-top:1px solid #d8c0f0;display:flex;flex-wrap:wrap;gap:10px">
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-fixed-m-col"><div style="font-size:10px;color:var(--muted)">月払い</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-fixed-m-sub">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-fixed-mf-col"><div style="font-size:10px;color:var(--muted)">月額変動</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-fixed-mf-sub">¥0</div></div>
           <div style="display:flex;flex-direction:column;gap:2px" id="ana-fixed-y-col"><div style="font-size:10px;color:var(--muted)">年払い</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-fixed-y-sub">¥0</div></div>
+          <div style="display:none;flex-direction:column;gap:2px" id="ana-fixed-x-col"><div style="font-size:10px;color:var(--muted)">臨時</div><div style="font-size:14px;font-weight:700;color:var(--purple)" id="ana-fixed-x-sub">¥0</div></div>
         </div>
       </div>
       <div class="sc" style="grid-column:1/-1;background:#e8f5e9;border:1px solid #a5d6a7">
@@ -889,6 +908,8 @@ let selBulkId=bulkCats[0]?.id||null;
 // 月額変動固定費
 let mfDefs=safeLS('kk_mf_defs','[]');
 let mfAmounts=safeLS('kk_mf_amounts','{}');
+let fixedAdj=safeLS('kk_fixed_adj','{}');      // {"固定費id|YYYY-MM": その月だけの金額(0=払わない)}
+let fixedExtras=safeLS('kk_fixed_extra','[]'); // [{id,ym,name,payment,amount}] 臨時の支出
 let mfEditId=null,mfEditYear=new Date().getFullYear();
 const DEFAULT_SAL_ITEMS=[{id:'si_base',name:'基本給',type:'inc',addToNet:false},{id:'si_housing',name:'住宅手当',type:'inc',addToNet:false},{id:'si_overtime',name:'残業代',type:'inc',addToNet:false},{id:'si_commute',name:'通勤手当',type:'inc',addToNet:false},{id:'si_area',name:'地域手当',type:'inc',addToNet:false},{id:'si_travel',name:'出張手当',type:'inc',addToNet:false},{id:'si_bonus',name:'賞与',type:'inc',addToNet:false},{id:'si_health',name:'健康保険',type:'ded',addToNet:false},{id:'si_pension',name:'厚生年金',type:'ded',addToNet:false},{id:'si_employ',name:'雇用保険',type:'ded',addToNet:false},{id:'si_care',name:'介護保険',type:'ded',addToNet:false},{id:'si_itax',name:'所得税',type:'ded',addToNet:false},{id:'si_rtax',name:'住民税',type:'ded',addToNet:false},{id:'si_member',name:'会費・積立',type:'ded',addToNet:false},{id:'si_other',name:'その他控除',type:'ded',addToNet:true}];
 let salItems=safeLS('kk_sal_items','null')||DEFAULT_SAL_ITEMS;
@@ -969,22 +990,25 @@ function isFixedActive(f, y, m){
   return true;
 }
 // 固定費（月払い・年払い）の月合計を取得
+function fixedAmt(f,y,m){const k=f.id+'|'+ym(y,m);return Object.prototype.hasOwnProperty.call(fixedAdj,k)?fixedAdj[k]:f.amount;}
 function getFixedTotal(y,m){
   let total=0;
   fixed.forEach(f=>{
     if(!isFixedActive(f,y,m)) return;
-    if(f.type==='m'){total+=f.amount;}
-    else if(f.type==='y'&&f.month===(m+1)){total+=f.amount;}
+    if(f.type==='m'){total+=fixedAmt(f,y,m);}
+    else if(f.type==='y'&&f.month===(m+1)){total+=fixedAmt(f,y,m);}
   });
+  fixedExtras.forEach(x=>{if(x.ym===ym(y,m))total+=x.amount;});
   return total;
 }
 function getFixedList(y,m){
   const list=[];
   fixed.forEach(f=>{
     if(!isFixedActive(f,y,m)) return;
-    if(f.type==='m'){list.push({name:f.name,payment:f.payment,amount:f.amount,ftype:'月払い'});}
-    else if(f.type==='y'&&f.month===(m+1)){list.push({name:f.name,payment:f.payment,amount:f.amount,ftype:'年払い'});}
+    if(f.type==='m'){const a=fixedAmt(f,y,m);if(a>0)list.push({name:f.name,payment:f.payment,amount:a,ftype:'月払い'});}
+    else if(f.type==='y'&&f.month===(m+1)){const a=fixedAmt(f,y,m);if(a>0)list.push({name:f.name,payment:f.payment,amount:a,ftype:'年払い'});}
   });
+  fixedExtras.forEach(x=>{if(x.ym===ym(y,m)&&x.amount>0)list.push({name:x.name,payment:x.payment,amount:x.amount,ftype:'臨時'});});
   return list;
 }
 // 月額変動固定費ヘルパー
@@ -1581,8 +1605,9 @@ function renderM(){
   const invMonthTotalForOut=investments.filter(r=>r.date.startsWith(key)).reduce((s,r)=>s+r.amount,0);
   const totalOutWithInv=totalOut+invMonthTotalForOut;
   // 固定費内訳
-  const fixedYTotal=fixed.filter(f=>f.type==='y'&&isFixedActive(f,anaY,anaM)&&f.month===(anaM+1)).reduce((s,f)=>s+f.amount,0);
-  const fixedMTotal=fixed.filter(f=>f.type==='m'&&isFixedActive(f,anaY,anaM)).reduce((s,f)=>s+f.amount,0);
+  const fixedYTotal=fixed.filter(f=>f.type==='y'&&isFixedActive(f,anaY,anaM)&&f.month===(anaM+1)).reduce((s,f)=>s+fixedAmt(f,anaY,anaM),0);
+  const fixedXTotal=fixedExtras.filter(x=>x.ym===ym(anaY,anaM)).reduce((s,x)=>s+x.amount,0);
+  const fixedMTotal=fixed.filter(f=>f.type==='m'&&isFixedActive(f,anaY,anaM)).reduce((s,f)=>s+fixedAmt(f,anaY,anaM),0);
   const fixedMfTotal=getMfTotal(anaY,anaM);
   const spTotal=rr.filter(r=>r.type==='out'&&r.special).reduce((s,r)=>s+r.amount,0);
   const pureVar=varOut-spTotal;
@@ -1636,6 +1661,8 @@ function renderM(){
   set2('ana-fixed-y-sub',fixedYTotal>0?'¥'+fixedYTotal.toLocaleString():'¥0');
   const fmCol=document.getElementById('ana-fixed-m-col');if(fmCol)fmCol.style.display=fixedMTotal>0?'flex':'none';
   const fmfCol=document.getElementById('ana-fixed-mf-col');if(fmfCol)fmfCol.style.display=fixedMfTotal>0?'flex':'none';
+  set2('ana-fixed-x-sub','¥'+fixedXTotal.toLocaleString());
+  const fxCol=document.getElementById('ana-fixed-x-col');if(fxCol)fxCol.style.display=fixedXTotal>0?'flex':'none';
   const fyCol=document.getElementById('ana-fixed-y-col');if(fyCol)fyCol.style.display=fixedYTotal>0?'flex':'none';
   const salData=salaries[key]||{};
   const salNetBase=salData.net||0;
@@ -1819,6 +1846,34 @@ function closeModal(e){if(e.target===document.getElementById('edit-modal'))close
 function closeModalDirect(){document.getElementById('edit-modal').classList.remove('show');}
 function saveEdit(){const id=document.getElementById('modal-idx').value;const type=document.getElementById('modal-type').value;const name=document.getElementById('modal-name').value.trim();const amt=parseInt(document.getElementById('modal-amt').value)||0;const day=parseInt(document.getElementById('modal-day').value)||0;const payment=document.getElementById('modal-pay').value;const month=parseInt(document.getElementById('modal-month').value)||1;if(!name||!amt){toast('名前・金額は必須です');return;}const idx=fixed.findIndex(f=>f.id===id);if(idx<0)return;const modalStart=document.getElementById('modal-start').value||'';const modalEnd=document.getElementById('modal-end').value||'';fixed[idx]={...fixed[idx],name,amount:amt,day,payment,start:modalStart,end:modalEnd};if(type==='y')fixed[idx].month=month;sv('kk_fixed',fixed);closeModalDirect();renderFixedLists();toast('更新しました ✓');}
 function autoRegFixed(){/* 固定費は日付なしで管理するため自動登録しない */}
+/* ---- 固定費のその月だけの調整（払わない・増減・臨時追加） ---- */
+function adjItems(){return fixed.filter(f=>isFixedActive(f,anaY,anaM)&&(f.type==='m'||(f.type==='y'&&f.month===(anaM+1))));}
+function renderAdjModal(){
+  const key=ym(anaY,anaM);
+  document.getElementById('adj-title').textContent=anaY+'年'+(anaM+1)+'月の固定費を調整';
+  const items=adjItems();
+  document.getElementById('adj-body').innerHTML=items.length?items.map(f=>{
+    const cur=fixedAmt(f,anaY,anaM),chg=cur!==f.amount;
+    return `<div class="modal-row" style="flex-wrap:wrap;margin-bottom:12px"><div style="flex:1;min-width:120px;font-size:13px;font-weight:700">${f.name}<div style="font-size:10px;font-weight:400;color:var(--muted)">${f.payment}・通常 ¥${f.amount.toLocaleString()}${chg?' ・<span style="color:#c0604a">この月は変更中</span>':''}</div></div><input type="number" inputmode="numeric" pattern="[0-9]*" id="adj-f-${f.id}" value="${cur}" min="0" style="flex:0 0 100px"><button onclick="document.getElementById('adj-f-${f.id}').value=0" style="border:none;background:#f5dcd6;color:#c0604a;font-size:11px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer">払わない</button><button onclick="document.getElementById('adj-f-${f.id}').value=${f.amount}" style="border:none;background:#e5e5ea;font-size:11px;font-weight:700;padding:8px;border-radius:8px;cursor:pointer">戻す</button></div>`;
+  }).join(''):'<div style="color:var(--muted);font-size:13px;padding:6px 0">この月に対象の固定費はありません</div>';
+  const ex=fixedExtras.filter(x=>x.ym===key);
+  document.getElementById('adj-extra-list').innerHTML=ex.length?ex.map(x=>`<div class="modal-row"><div style="flex:1;font-size:13px">${x.name}<span style="font-size:10px;color:var(--muted)">（${x.payment}）</span></div><div style="font-weight:700">¥${x.amount.toLocaleString()}</div><button onclick="delFixedExtra('${x.id}')" style="border:none;background:none;color:#c0604a;font-size:16px;cursor:pointer">✕</button></div>`).join(''):'<div style="color:var(--muted);font-size:12px;margin-bottom:8px">臨時の支出はありません</div>';
+  document.getElementById('adj-x-pay').innerHTML=master.payments.map(p=>`<option>${p}</option>`).join('');
+}
+function openAdjModal(){renderAdjModal();document.getElementById('adj-modal').classList.add('show');}
+function closeAdjModal(){document.getElementById('adj-modal').classList.remove('show');renderM();try{renderCal();}catch(e){}}
+function saveFixedAdj(){
+  adjItems().forEach(f=>{const el=document.getElementById('adj-f-'+f.id);if(!el||el.value==='')return;const v=Math.max(parseInt(el.value)||0,0),k=f.id+'|'+ym(anaY,anaM);if(v===f.amount)delete fixedAdj[k];else fixedAdj[k]=v;});
+  sv('kk_fixed_adj',fixedAdj);renderAdjModal();renderM();try{renderCal();}catch(e){}toast('この月の固定費を更新しました ✓');
+}
+function addFixedExtra(){
+  const name=document.getElementById('adj-x-name').value.trim()||'臨時',amount=parseInt(document.getElementById('adj-x-amt').value)||0,payment=document.getElementById('adj-x-pay').value;
+  if(amount<=0){toast('金額を入力してください');return;}
+  fixedExtras.push({id:uid(),ym:ym(anaY,anaM),name,payment,amount});sv('kk_fixed_extra',fixedExtras);
+  document.getElementById('adj-x-name').value='';document.getElementById('adj-x-amt').value='';renderAdjModal();renderM();toast('臨時の支出を追加しました ✓');
+}
+function delFixedExtra(id){fixedExtras=fixedExtras.filter(x=>x.id!==id);sv('kk_fixed_extra',fixedExtras);renderAdjModal();renderM();}
+
 function moveItem(type,i,dir){const arr=type==='pay'?master.payments:master.genres;const j=i+dir;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]];sv('kk_master',master);applyMaster();if(type==='pay')renderPayList();else renderGenreList();}
 function renderPayList(){const el=document.getElementById('pay-list');if(!el)return;if(!master.payments.length){el.innerHTML='<div class="fi-empty">支払い方法が未登録です</div>';return;}el.innerHTML=master.payments.map((p,i)=>`<div class="fi-item"><div style="display:flex;flex-direction:column;gap:2px;margin-right:6px"><button onclick="moveItem('pay',${i},-1)" style="border:none;background:none;font-size:14px;cursor:pointer;color:${i===0?'#ddd':'#a89880'};padding:0;line-height:1" ${i===0?'disabled':''}>▲</button><button onclick="moveItem('pay',${i},1)" style="border:none;background:none;font-size:14px;cursor:pointer;color:${i===master.payments.length-1?'#ddd':'#a89880'};padding:0;line-height:1" ${i===master.payments.length-1?'disabled':''}>▼</button></div><div class="fi-left"><div class="fi-name">${p}</div></div><button class="fi-edit" onclick="editPayment(${i})">編集</button><button class="fi-del" onclick="delPayment(${i})">✕</button></div>`).join('');}
 function checkPayBtn(){const ok=!!document.getElementById('pay-new-name').value.trim();const btn=document.getElementById('pay-add-btn');btn.disabled=!ok;btn.style.background=ok?'#007aff':'#c7c7cc';}
@@ -2007,7 +2062,9 @@ function packYear(y){
       salaries:ymOfYear(salaries,y),
       budgets:ymOfYear(budgets,y),
       capLimits:ymOfYear(capLimits,y),
-      mfAmounts:mfa
+      mfAmounts:mfa,
+      fixedAdj:Object.fromEntries(Object.entries(fixedAdj).filter(([k])=>String(k.split('|')[1]||'').startsWith(ys))),
+      fixedExtras:fixedExtras.filter(x=>String(x.ym||'').startsWith(ys))
     }
   };
 }
@@ -2118,7 +2175,7 @@ function saveAllData(){
   sv('kk_records',records);sv('kk_budgets',budgets);sv('kk_cap_limits',capLimits);sv('kk_fixed',fixed);
   sv('kk_master',master);sv('kk_bulkCats',bulkCats);sv('kk_salaries',salaries);sv('kk_incomes',incomes);sv('kk_investments',investments);sv('kk_savings_goals',savingsGoals);sv('kk_savings_transfers',savingsTransfers);sv('kk_savings_overrides',savingsOverrides);sv('kk_savings_start_month',savingsStartMonth);
   sv('kk_discount_types',discountTypes);sv('kk_allowance_types',allowanceTypes);sv('kk_sal_items',salItems);
-  sv('kk_mf_defs',mfDefs);sv('kk_mf_amounts',mfAmounts);sv('kk_income_cats',incomeCats);
+  sv('kk_mf_defs',mfDefs);sv('kk_mf_amounts',mfAmounts);sv('kk_fixed_adj',fixedAdj);sv('kk_fixed_extra',fixedExtras);sv('kk_income_cats',incomeCats);
 }
 function applySettingsFrom(st){
   if(!st)return;
@@ -2153,6 +2210,9 @@ function applyYearData(y,d){
     if(!mfAmounts[id])mfAmounts[id]={};
     Object.assign(mfAmounts[id],d.mfAmounts[id]||{});
   });
+  Object.keys(fixedAdj).forEach(k=>{if(String(k.split('|')[1]||'').startsWith(ys))delete fixedAdj[k];});
+  Object.assign(fixedAdj,d.fixedAdj||{});
+  fixedExtras=fixedExtras.filter(x=>!String(x.ym||'').startsWith(ys)).concat(d.fixedExtras||[]);
 }
 async function importData(e){
   const files=[...e.target.files];e.target.value='';
@@ -2225,7 +2285,7 @@ if(window.visualViewport){
   });
 }
 /* iOSでキーボード開閉後にWKWebViewの表示領域がズレて上部に隙間ができる問題への対策 */
-const APP_VERSION='2026-09-29-13'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
+const APP_VERSION='2026-09-29-14'; // 変更のたびにこの値を書き換える(バナー表示のトリガー)
 function showUpdateBanner(){
   const bar=document.getElementById('update-bar');if(!bar)return;
   bar.hidden=false;
